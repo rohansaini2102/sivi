@@ -1,4 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import logger from '../utils/logger';
 
 let transporter: Transporter | null = null;
@@ -6,7 +7,7 @@ let transporter: Transporter | null = null;
 // Create transporter lazily (after env vars are loaded)
 const getTransporter = (): Transporter => {
   if (!transporter) {
-    transporter = nodemailer.createTransport({
+    const options: SMTPTransport.Options = {
       host: process.env.EMAIL_HOST,
       port: parseInt(process.env.EMAIL_PORT || '465'),
       secure: true, // true for 465, false for other ports
@@ -14,9 +15,8 @@ const getTransporter = (): Transporter => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
       },
-      // Force IPv4 to avoid IPv6 connection issues
-      family: 4,
-    });
+    };
+    transporter = nodemailer.createTransport(options);
 
     logger.info('Email transporter created', {
       host: process.env.EMAIL_HOST,
