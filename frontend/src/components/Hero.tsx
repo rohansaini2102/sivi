@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Users, FileText, HelpCircle, TrendingUp, Play, ArrowRight, Award, BookOpen } from 'lucide-react';
 import HeroIllustration from './HeroIllustration';
@@ -149,23 +150,26 @@ const Hero: React.FC<HeroProps> = ({ onStartQuiz }) => {
 
             {/* CTA Buttons */}
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10">
-              <motion.button
-                whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0, 133, 255, 0.35)' }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onStartQuiz}
-                className="px-8 py-4 bg-primary text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg"
-              >
-                Explore Courses
-                <ArrowRight className="w-5 h-5" />
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02, backgroundColor: 'rgba(0, 133, 255, 0.05)' }}
-                whileTap={{ scale: 0.98 }}
-                className="px-8 py-4 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl flex items-center justify-center gap-2 text-lg"
-              >
-                <Play className="w-5 h-5 text-primary" />
-                Free Mock Test
-              </motion.button>
+              <Link href="/courses">
+                <motion.span
+                  whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0, 133, 255, 0.35)' }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-8 py-4 bg-primary text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg cursor-pointer"
+                >
+                  Explore Courses
+                  <ArrowRight className="w-5 h-5" />
+                </motion.span>
+              </Link>
+              <Link href="/free-tests">
+                <motion.span
+                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(0, 133, 255, 0.05)' }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-8 py-4 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl flex items-center justify-center gap-2 text-lg cursor-pointer"
+                >
+                  <Play className="w-5 h-5 text-primary" />
+                  Free Mock Test
+                </motion.span>
+              </Link>
             </motion.div>
 
             {/* Trust Badges */}

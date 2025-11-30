@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   Facebook, Twitter, Instagram, Youtube, Linkedin,
@@ -9,36 +10,36 @@ import {
 
 const Footer: React.FC = () => {
   const quickLinks = [
-    { name: 'About Us', href: '#' },
-    { name: 'Contact', href: '#' },
-    { name: 'Careers', href: '#' },
-    { name: 'Blog', href: '#' },
-    { name: 'Help Center', href: '#' },
-    { name: 'Terms of Service', href: '#' },
-    { name: 'Privacy Policy', href: '#' },
-    { name: 'Refund Policy', href: '#' },
+    { name: 'About Us', href: '/about' },
+    { name: 'Contact', href: '/contact' },
+    { name: 'Careers', href: '/careers' },
+    { name: 'Blog', href: '/blog' },
+    { name: 'Help Center', href: '/help' },
+    { name: 'Terms of Service', href: '/terms' },
+    { name: 'Privacy Policy', href: '/privacy' },
+    { name: 'Refund Policy', href: '/refund' },
   ];
 
   const resources = [
-    { name: 'Free Mock Tests', href: '#' },
-    { name: 'Rajasthan Current Affairs', href: '#' },
-    { name: 'Study Materials', href: '#' },
-    { name: 'Previous Year Papers', href: '#' },
-    { name: 'RPSC Exam Calendar 2025', href: '#' },
-    { name: 'Exam Syllabus', href: '#' },
-    { name: 'Exam Notifications', href: '#' },
-    { name: 'Success Stories', href: '#' },
+    { name: 'Free Mock Tests', href: '/free-tests' },
+    { name: 'Rajasthan Current Affairs', href: '/current-affairs' },
+    { name: 'Study Materials', href: '/study-materials' },
+    { name: 'Previous Year Papers', href: '/previous-papers' },
+    { name: 'RPSC Exam Calendar 2025', href: '/exam-calendar' },
+    { name: 'Exam Syllabus', href: '/syllabus' },
+    { name: 'Exam Notifications', href: '/notifications' },
+    { name: 'Success Stories', href: '/success-stories' },
   ];
 
   const examLinks = [
-    { name: 'RAS Prelims', href: '#' },
-    { name: 'RAS Mains', href: '#' },
-    { name: 'REET Level 1', href: '#' },
-    { name: 'REET Level 2', href: '#' },
-    { name: 'Rajasthan Patwar', href: '#' },
-    { name: 'Rajasthan Police', href: '#' },
-    { name: 'RPSC 1st Grade', href: '#' },
-    { name: 'RPSC 2nd Grade', href: '#' },
+    { name: 'RAS Prelims', href: '/test-series/ras-prelims' },
+    { name: 'RAS Mains', href: '/test-series/ras-mains' },
+    { name: 'REET Level 1', href: '/test-series/reet-level-1' },
+    { name: 'REET Level 2', href: '/test-series/reet-level-2' },
+    { name: 'Rajasthan Patwar', href: '/test-series/patwar' },
+    { name: 'Rajasthan Police', href: '/test-series/police' },
+    { name: 'RPSC 1st Grade', href: '/test-series/rpsc-1st-grade' },
+    { name: 'RPSC 2nd Grade', href: '/test-series/rpsc-2nd-grade' },
   ];
 
   const socialLinks = [
@@ -65,18 +66,18 @@ const Footer: React.FC = () => {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
             {examLinks.map((exam, index) => (
-              <motion.a
-                key={exam.name}
-                href={exam.href}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.03 }}
-                whileHover={{ scale: 1.05, backgroundColor: 'rgba(0, 133, 255, 0.1)' }}
-                className="px-4 py-3 bg-gray-800 rounded-xl text-center text-sm font-medium hover:text-primary transition-all"
-              >
-                {exam.name}
-              </motion.a>
+              <Link key={exam.name} href={exam.href}>
+                <motion.span
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.03 }}
+                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(0, 133, 255, 0.1)' }}
+                  className="block px-4 py-3 bg-gray-800 rounded-xl text-center text-sm font-medium hover:text-primary transition-all cursor-pointer"
+                >
+                  {exam.name}
+                </motion.span>
+              </Link>
             ))}
           </div>
         </div>
@@ -133,12 +134,12 @@ const Footer: React.FC = () => {
             <ul className="space-y-2">
               {quickLinks.map((link) => (
                 <li key={link.name}>
-                  <a
+                  <Link
                     href={link.href}
                     className="text-sm text-gray-400 hover:text-white transition-colors"
                   >
                     {link.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -155,12 +156,12 @@ const Footer: React.FC = () => {
             <ul className="space-y-2">
               {resources.map((link) => (
                 <li key={link.name}>
-                  <a
+                  <Link
                     href={link.href}
                     className="text-sm text-gray-400 hover:text-white transition-colors"
                   >
                     {link.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -224,9 +225,9 @@ const Footer: React.FC = () => {
               © 2025 SiviAcademy. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Cookies</a>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link>
             </div>
           </div>
         </div>

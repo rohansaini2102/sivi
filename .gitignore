@@ -47,3 +47,7 @@ docs/
 
 # Plan files
 plan.md
+
+# Claude Code
+.claude/
+.claude
