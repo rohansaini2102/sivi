@@ -68,6 +68,9 @@ export const authApi = {
     api.post('/auth/verify-otp', { type, value, otp, name }),
 
   // Admin 2FA login - Step 1: Verify password and send OTP
+  adminLogin: (email: string, password: string) =>
+    api.post('/auth/admin/verify-password', { email, password }),
+
   adminVerifyPassword: (email: string, password: string) =>
     api.post('/auth/admin/verify-password', { email, password }),
 

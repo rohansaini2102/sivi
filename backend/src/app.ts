@@ -20,7 +20,7 @@ const app: Application = express();
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://siviacademy.com', 'https://www.siviacademy.com']
+    ? (process.env.FRONTEND_URL || 'https://siviacademy.com').split(',')
     : ['http://localhost:3000'],
   credentials: true,
 }));
