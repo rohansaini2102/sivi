@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   Facebook, Twitter, Instagram, Youtube, Linkedin,
@@ -93,9 +94,13 @@ const Footer: React.FC = () => {
             viewport={{ once: true }}
           >
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-indigo-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg font-grotesk">S</span>
-              </div>
+              <Image
+                src="/icononly.svg"
+                alt="Sivi Academy"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain brightness-0 invert"
+              />
               <span className="font-grotesk font-bold text-xl">
                 Sivi<span className="text-primary">Academy</span>
               </span>

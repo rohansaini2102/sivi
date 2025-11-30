@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Mail, Phone, ArrowRight, Loader2, ArrowLeft, CheckCircle2, BookOpen, Users, Award } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -72,9 +73,14 @@ export default function LoginPage() {
         {/* Logo */}
         <Link href="/" className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">S</span>
-            </div>
+            <Image
+              src="/icononly.svg"
+              alt="Sivi Academy"
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain brightness-0 invert"
+              priority
+            />
             <span className="font-bold text-2xl text-white">
               SiviAcademy
             </span>
@@ -146,9 +152,14 @@ export default function LoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden mb-8 text-center">
             <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-indigo-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">S</span>
-              </div>
+              <Image
+                src="/icononly.svg"
+                alt="Sivi Academy"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+                priority
+              />
               <span className="font-bold text-xl text-gray-900">
                 Sivi<span className="text-primary">Academy</span>
               </span>

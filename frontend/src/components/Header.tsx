@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, ChevronDown, User, LogOut, LayoutDashboard } from 'lucide-react';
@@ -59,9 +60,14 @@ const Header: React.FC<HeaderProps> = ({ onStartQuiz }) => {
               whileHover={{ scale: 1.02 }}
               className="flex items-center gap-2 cursor-pointer"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-indigo-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg font-grotesk">S</span>
-              </div>
+              <Image
+                src="/icononly.svg"
+                alt="Sivi Academy"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+                priority
+              />
               <span className="font-grotesk font-bold text-xl text-gray-900">
                 Sivi<span className="text-primary">Academy</span>
               </span>

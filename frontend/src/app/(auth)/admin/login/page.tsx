@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Loader2, Shield, Eye, EyeOff, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -115,12 +116,17 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <Link href="/" className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
-              <Shield className="text-white w-6 h-6" />
-            </div>
+            <Image
+              src="/icononly.svg"
+              alt="Sivi Academy"
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain brightness-0 invert"
+              priority
+            />
             <div>
-              <span className="font-bold text-2xl text-white">SiviAcademy</span>
-              <p className="text-slate-400 text-sm">Admin Portal</p>
+              <span className="font-bold text-2xl text-white block">SiviAcademy</span>
+              <span className="text-slate-400 text-sm">Admin Portal</span>
             </div>
           </div>
         </Link>
@@ -190,9 +196,14 @@ export default function AdminLoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden mb-8 text-center">
             <div className="inline-flex items-center gap-3">
-              <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
-                <Shield className="text-white w-6 h-6" />
-              </div>
+              <Image
+                src="/icononly.svg"
+                alt="Sivi Academy"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain brightness-0 invert"
+                priority
+              />
               <div className="text-left">
                 <span className="font-bold text-xl text-white block">SiviAcademy</span>
                 <span className="text-slate-400 text-sm">Admin Portal</span>
