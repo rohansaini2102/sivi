@@ -69,6 +69,81 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  metadataBase: new URL("https://siviacademy.in"),
+  alternates: {
+    canonical: "/",
+  },
+};
+
+// JSON-LD Structured Data for SEO
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://siviacademy.in/#organization",
+      name: "Sivi Academy",
+      url: "https://siviacademy.in",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://siviacademy.in/fulllogo.png",
+        width: 500,
+        height: 500,
+      },
+      description:
+        "Rajasthan's most trusted platform for government exam preparation. Crack RAS, REET, Patwar, Police & all RPSC exams.",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Jaipur",
+        addressRegion: "Rajasthan",
+        addressCountry: "IN",
+      },
+      contactPoint: {
+        "@type": "ContactPoint",
+        telephone: "+91-12345-67890",
+        contactType: "customer service",
+        availableLanguage: ["Hindi", "English"],
+      },
+      sameAs: [
+        "https://facebook.com/siviacademy",
+        "https://instagram.com/siviacademy",
+        "https://youtube.com/siviacademy",
+        "https://twitter.com/siviacademy",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://siviacademy.in/#website",
+      url: "https://siviacademy.in",
+      name: "Sivi Academy",
+      description: "Rajasthan Govt Exam Preparation Platform",
+      publisher: {
+        "@id": "https://siviacademy.in/#organization",
+      },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: "https://siviacademy.in/search?q={search_term_string}",
+        "query-input": "required name=search_term_string",
+      },
+      inLanguage: "en-IN",
+    },
+    {
+      "@type": "EducationalOrganization",
+      "@id": "https://siviacademy.in/#educationalorg",
+      name: "Sivi Academy",
+      url: "https://siviacademy.in",
+      description:
+        "Online coaching platform for Rajasthan government exams including RAS, REET, Patwar, Police & RPSC",
+      areaServed: {
+        "@type": "State",
+        name: "Rajasthan",
+        containedInPlace: {
+          "@type": "Country",
+          name: "India",
+        },
+      },
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -78,6 +153,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
