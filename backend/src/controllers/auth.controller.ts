@@ -15,6 +15,7 @@ import {
   changeAdminPassword,
 } from '../services/auth.service';
 import { generateTokens, verifyRefreshToken } from '../utils/jwt';
+import { REFRESH_TOKEN_COOKIE_OPTIONS, CLEAR_COOKIE_OPTIONS, COOKIE_NAMES } from '../utils/cookie';
 import User from '../models/User';
 
 // Mask email for response
@@ -96,13 +97,8 @@ export const verifyOTPController = async (req: Request, res: Response) => {
       });
     }
 
-    // Set refresh token in httpOnly cookie
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Set refresh token in httpOnly cookie (cross-origin safe)
+    res.cookie(COOKIE_NAMES.REFRESH_TOKEN, result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
 
     return res.status(200).json({
       success: true,
@@ -200,13 +196,8 @@ export const adminVerifyOTPController = async (req: Request, res: Response) => {
       });
     }
 
-    // Set refresh token in httpOnly cookie
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Set refresh token in httpOnly cookie (cross-origin safe)
+    res.cookie(COOKIE_NAMES.REFRESH_TOKEN, result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
 
     return res.status(200).json({
       success: true,
@@ -273,6 +264,16 @@ export const refreshTokenController = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies?.refreshToken;
 
+    // Debug logging for cross-origin cookie issues
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Refresh token request:', {
+        hasCookies: !!req.cookies,
+        hasRefreshToken: !!refreshToken,
+        origin: req.headers.origin,
+        cookieHeader: req.headers.cookie ? 'present' : 'missing',
+      });
+    }
+
     if (!refreshToken) {
       return res.status(401).json({
         success: false,
@@ -303,13 +304,8 @@ export const refreshTokenController = async (req: Request, res: Response) => {
     // Generate new tokens
     const tokens = generateTokens(user._id.toString(), user.role);
 
-    // Set new refresh token in cookie
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Set new refresh token in cookie (cross-origin safe)
+    res.cookie(COOKIE_NAMES.REFRESH_TOKEN, tokens.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
 
     return res.status(200).json({
       success: true,
@@ -325,14 +321,10 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 };
 
 // POST /api/auth/logout
-export const logoutController = async (req: Request, res: Response) => {
+export const logoutController = async (_req: Request, res: Response) => {
   try {
-    // Clear refresh token cookie
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
-    });
+    // Clear refresh token cookie (cross-origin safe)
+    res.clearCookie(COOKIE_NAMES.REFRESH_TOKEN, CLEAR_COOKIE_OPTIONS);
 
     return res.status(200).json({
       success: true,

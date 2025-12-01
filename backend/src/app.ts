@@ -20,13 +20,33 @@ const app: Application = express();
 // Trust proxy (required for Cloud Run, Railway, Heroku, etc.)
 app.set('trust proxy', 1);
 
+// CORS Configuration - Industry Standard for Cross-Origin Auth
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? (process.env.FRONTEND_URL || 'https://siviacademy.in')
+      .split(',')
+      .map(origin => origin.trim()) // Remove whitespace
+  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? (process.env.FRONTEND_URL || 'https://siviacademy.com').split(',')
-    : ['http://localhost:3000'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, origin);
+    } else {
+      logger.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Set-Cookie'],
 }));
 
 // Rate limiting

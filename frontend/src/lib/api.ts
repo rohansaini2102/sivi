@@ -23,6 +23,19 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Track if we're currently refreshing to prevent multiple refresh calls
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+const subscribeTokenRefresh = (callback: (token: string) => void) => {
+  refreshSubscribers.push(callback);
+};
+
+const onTokenRefreshed = (token: string) => {
+  refreshSubscribers.forEach(callback => callback(token));
+  refreshSubscribers = [];
+};
+
 // Response interceptor - handle token refresh
 api.interceptors.response.use(
   (response) => response,
@@ -31,7 +44,27 @@ api.interceptors.response.use(
 
     // If 401 and not already retrying, try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Skip refresh for auth endpoints to prevent infinite loops
+      if (originalRequest.url?.includes('/auth/refresh') ||
+          originalRequest.url?.includes('/auth/login') ||
+          originalRequest.url?.includes('/auth/admin/verify')) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // Wait for the ongoing refresh to complete
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token: string) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const { data } = await api.post('/auth/refresh');
@@ -40,18 +73,27 @@ api.interceptors.response.use(
         // Save new token
         localStorage.setItem('accessToken', newToken);
 
+        isRefreshing = false;
+        onTokenRefreshed(newToken);
+
         // Retry original request with new token
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
         }
         return api(originalRequest);
       } catch (refreshError) {
+        isRefreshing = false;
+        refreshSubscribers = [];
+
         // Refresh failed - clear token and redirect to appropriate login
         localStorage.removeItem('accessToken');
         if (typeof window !== 'undefined') {
-          // Redirect to admin login if on admin routes, otherwise user login
-          const isAdminRoute = window.location.pathname.startsWith('/admin');
-          window.location.href = isAdminRoute ? '/admin/login' : '/login';
+          // Only redirect if not already on a login page
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes('/login')) {
+            const isAdminRoute = currentPath.startsWith('/admin');
+            window.location.href = isAdminRoute ? '/admin/login' : '/login';
+          }
         }
         return Promise.reject(refreshError);
       }
