@@ -46,10 +46,12 @@ api.interceptors.response.use(
         }
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - clear token and redirect to login
+        // Refresh failed - clear token and redirect to appropriate login
         localStorage.removeItem('accessToken');
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          // Redirect to admin login if on admin routes, otherwise user login
+          const isAdminRoute = window.location.pathname.startsWith('/admin');
+          window.location.href = isAdminRoute ? '/admin/login' : '/login';
         }
         return Promise.reject(refreshError);
       }
