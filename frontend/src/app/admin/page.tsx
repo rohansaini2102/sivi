@@ -9,19 +9,21 @@ import {
   BookOpen,
   FileText,
   BarChart3,
-  Settings,
-  LogOut,
-  Shield,
   Plus,
   TrendingUp,
+  IndianRupee,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { useRequireAdmin } from '@/hooks/useAuth';
+import { StatCard } from '@/components/cards';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { logout } = useAuthStore();
-  const { user, isLoading } = useRequireAdmin();
+  const { user } = useAuthStore();
 
   // Redirect to change password if required
   useEffect(() => {
@@ -30,205 +32,349 @@ export default function AdminDashboardPage() {
     }
   }, [user, router]);
 
-  const handleLogout = async () => {
-    await logout();
-    router.push('/');
-  };
-
-  // Show loading while checking auth or if password change required
-  if (isLoading || !user || user.mustChangePassword) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-      </div>
-    );
-  }
-
   const stats = [
-    { label: 'Total Users', value: '1,234', icon: Users, color: 'bg-blue-500' },
-    { label: 'Active Courses', value: '12', icon: BookOpen, color: 'bg-green-500' },
-    { label: 'Test Series', value: '8', icon: FileText, color: 'bg-purple-500' },
-    { label: 'Revenue', value: '₹45,000', icon: TrendingUp, color: 'bg-yellow-500' },
+    {
+      title: 'Total Users',
+      value: '1,234',
+      icon: Users,
+      variant: 'primary' as const,
+      trend: { value: 12, isPositive: true },
+      description: '+48 this week',
+    },
+    {
+      title: 'Active Courses',
+      value: '12',
+      icon: BookOpen,
+      variant: 'success' as const,
+      description: '3 drafts pending',
+    },
+    {
+      title: 'Test Series',
+      value: '8',
+      icon: FileText,
+      variant: 'default' as const,
+      description: '156 total exams',
+    },
+    {
+      title: 'Revenue',
+      value: '₹45,000',
+      icon: IndianRupee,
+      variant: 'warning' as const,
+      trend: { value: 8, isPositive: true },
+      description: 'This month',
+    },
   ];
 
   const quickActions = [
-    { label: 'Add Course', icon: Plus, href: '/admin/courses/new', color: 'bg-blue-600' },
-    { label: 'Add Test Series', icon: Plus, href: '/admin/test-series/new', color: 'bg-green-600' },
-    { label: 'View Users', icon: Users, href: '/admin/users', color: 'bg-purple-600' },
-    { label: 'Analytics', icon: BarChart3, href: '/admin/analytics', color: 'bg-yellow-600' },
+    {
+      label: 'Add Course',
+      icon: Plus,
+      href: '/admin/content/courses/new',
+      color: 'bg-primary hover:bg-primary-dark',
+    },
+    {
+      label: 'Add Test Series',
+      icon: Plus,
+      href: '/admin/content/test-series/new',
+      color: 'bg-emerald-600 hover:bg-emerald-700',
+    },
+    {
+      label: 'View Users',
+      icon: Users,
+      href: '/admin/users',
+      color: 'bg-purple-600 hover:bg-purple-700',
+    },
+    {
+      label: 'Analytics',
+      icon: BarChart3,
+      href: '/admin/payments',
+      color: 'bg-amber-600 hover:bg-amber-700',
+    },
+  ];
+
+  const recentActivity = [
+    {
+      type: 'user',
+      title: 'New user registered',
+      subtitle: 'user@example.com',
+      time: '2 min ago',
+      icon: Users,
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+    },
+    {
+      type: 'enrollment',
+      title: 'Course enrollment',
+      subtitle: 'Rajasthan GK Complete Course',
+      time: '15 min ago',
+      icon: BookOpen,
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600',
+    },
+    {
+      type: 'test',
+      title: 'Test completed',
+      subtitle: 'RPSC RAS Mock Test #5',
+      time: '1 hour ago',
+      icon: FileText,
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+    },
+    {
+      type: 'payment',
+      title: 'Payment received',
+      subtitle: '₹999 - RAS Test Series',
+      time: '2 hours ago',
+      icon: IndianRupee,
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+    },
+  ];
+
+  const recentUsers = [
+    { name: 'Rahul Sharma', email: 'rahul@email.com', enrolled: 2, joined: 'Today' },
+    { name: 'Priya Singh', email: 'priya@email.com', enrolled: 1, joined: 'Today' },
+    { name: 'Amit Kumar', email: 'amit@email.com', enrolled: 3, joined: 'Yesterday' },
+    { name: 'Neha Gupta', email: 'neha@email.com', enrolled: 1, joined: 'Yesterday' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-slate-900 text-white p-6">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Shield size={24} />
-          </div>
-          <div>
-            <h1 className="font-bold">SiviAcademy</h1>
-            <p className="text-xs text-slate-400">Admin Panel</p>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-slate-400">
+            Welcome back, {user?.name?.split(' ')[0] || 'Admin'}
+          </p>
         </div>
-
-        <nav className="space-y-2">
-          <Link
-            href="/admin"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800 text-white"
-          >
-            <BarChart3 size={20} />
-            Dashboard
-          </Link>
-          <Link
-            href="/admin/users"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <Users size={20} />
-            Users
-          </Link>
-          <Link
-            href="/admin/courses"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <BookOpen size={20} />
-            Courses
-          </Link>
-          <Link
-            href="/admin/test-series"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <FileText size={20} />
-            Test Series
-          </Link>
-          <Link
-            href="/admin/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <Settings size={20} />
-            Settings
-          </Link>
-        </nav>
-
-        <div className="absolute bottom-6 left-6 right-6">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-red-600 hover:text-white transition-colors w-full"
-          >
-            <LogOut size={20} />
-            Logout
-          </button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800" asChild>
+            <Link href="/admin/content">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Content
+            </Link>
+          </Button>
         </div>
-      </aside>
+      </div>
 
-      {/* Main Content */}
-      <main className="ml-64 p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-            <p className="text-slate-600">Welcome back, {user.name}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600">
-              {new Date().toLocaleDateString('en-IN', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </span>
-          </div>
-        </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <Card className="bg-slate-800 border-slate-700">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-slate-400">{stat.title}</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-semibold text-white">{stat.value}</p>
+                      {stat.trend && (
+                        <span
+                          className={`flex items-center text-xs font-medium ${
+                            stat.trend.isPositive ? 'text-emerald-400' : 'text-red-400'
+                          }`}
+                        >
+                          {stat.trend.isPositive ? (
+                            <ArrowUpRight className="h-3 w-3" />
+                          ) : (
+                            <ArrowDownRight className="h-3 w-3" />
+                          )}
+                          {stat.trend.value}%
+                        </span>
+                      )}
+                    </div>
+                    {stat.description && (
+                      <p className="text-xs text-slate-500">{stat.description}</p>
+                    )}
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700">
+                    <stat.icon className="h-5 w-5 text-slate-300" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
 
-        {/* Stats Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-        >
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-xl p-6 shadow-sm"
+      {/* Quick Actions */}
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-white">Quick Actions</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {quickActions.map((action, index) => (
+            <motion.div
+              key={action.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 + index * 0.1 }}
             >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                  <stat.icon className="text-white" size={24} />
-                </div>
-                <div>
-                  <p className="text-slate-600 text-sm">{stat.label}</p>
-                  <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions.map((action) => (
               <Link
-                key={action.label}
                 href={action.href}
-                className={`${action.color} text-white rounded-xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity`}
+                className={`${action.color} flex items-center gap-3 rounded-xl p-4 text-white transition-all hover:shadow-lg`}
               >
-                <action.icon size={24} />
+                <action.icon className="h-5 w-5" />
                 <span className="font-medium">{action.label}</span>
               </Link>
-            ))}
-          </div>
-        </motion.div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl p-6 shadow-sm"
-        >
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="text-blue-600" size={20} />
-              </div>
-              <div className="flex-1">
-                <p className="text-slate-800">New user registered</p>
-                <p className="text-sm text-slate-500">user@example.com</p>
-              </div>
-              <span className="text-sm text-slate-500">2 min ago</span>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg text-white">Recent Activity</CardTitle>
+              <Link
+                href="/admin/payments"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                View All
+              </Link>
             </div>
-            <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <BookOpen className="text-green-600" size={20} />
-              </div>
-              <div className="flex-1">
-                <p className="text-slate-800">Course enrollment</p>
-                <p className="text-sm text-slate-500">Rajasthan GK Complete Course</p>
-              </div>
-              <span className="text-sm text-slate-500">15 min ago</span>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-slate-700">
+              {recentActivity.map((activity, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                  className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-700/50"
+                >
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${activity.iconBg}`}
+                  >
+                    <activity.icon className={`h-5 w-5 ${activity.iconColor}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-white">{activity.title}</p>
+                    <p className="text-sm text-slate-400">{activity.subtitle}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {activity.time}
+                  </span>
+                </motion.div>
+              ))}
             </div>
-            <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <FileText className="text-purple-600" size={20} />
-              </div>
-              <div className="flex-1">
-                <p className="text-slate-800">Test completed</p>
-                <p className="text-sm text-slate-500">RPSC RAS Mock Test #5</p>
-              </div>
-              <span className="text-sm text-slate-500">1 hour ago</span>
+          </CardContent>
+        </Card>
+
+        {/* Recent Users */}
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg text-white">Recent Users</CardTitle>
+              <Link
+                href="/admin/users"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                View All
+              </Link>
             </div>
-          </div>
-        </motion.div>
-      </main>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-slate-700">
+              {recentUsers.map((user, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                  className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-700/50"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700">
+                    <span className="text-sm font-medium text-white">
+                      {user.name.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-white">{user.name}</p>
+                    <p className="truncate text-sm text-slate-400">{user.email}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+                      {user.enrolled} enrolled
+                    </Badge>
+                    <p className="mt-1 text-xs text-slate-500">{user.joined}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Content Overview */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-400">Published Courses</p>
+                <p className="text-3xl font-bold text-white">9</p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/20">
+                <BookOpen className="h-6 w-6 text-emerald-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-slate-400">3 drafts</span>
+              <Link href="/admin/content" className="text-primary hover:underline">
+                Manage →
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-400">Published Test Series</p>
+                <p className="text-3xl font-bold text-white">6</p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-500/20">
+                <FileText className="h-6 w-6 text-purple-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-slate-400">2 drafts</span>
+              <Link href="/admin/content" className="text-primary hover:underline">
+                Manage →
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-400">Question Bank</p>
+                <p className="text-3xl font-bold text-white">2,450</p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500/20">
+                <FileText className="h-6 w-6 text-amber-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-slate-400">+120 this week</span>
+              <Link href="/admin/questions" className="text-primary hover:underline">
+                Manage →
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,20 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET must be set in environment variables');
+  }
+  return secret;
+};
 
-if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
-  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
-}
+const getJwtRefreshSecret = (): string => {
+  const secret = process.env.JWT_REFRESH_SECRET;
+  if (!secret) {
+    throw new Error('JWT_REFRESH_SECRET must be set in environment variables');
+  }
+  return secret;
+};
 
 export interface TokenPayload {
   userId: string;
@@ -19,7 +28,7 @@ export interface RefreshTokenPayload {
 export const generateAccessToken = (userId: string, role: string): string => {
   return jwt.sign(
     { userId, role },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: '15m' }
   );
 };
@@ -27,14 +36,14 @@ export const generateAccessToken = (userId: string, role: string): string => {
 export const generateRefreshToken = (userId: string): string => {
   return jwt.sign(
     { userId },
-    JWT_REFRESH_SECRET,
+    getJwtRefreshSecret(),
     { expiresIn: '7d' }
   );
 };
 
 export const verifyAccessToken = (token: string): TokenPayload | null => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as TokenPayload;
     return decoded;
   } catch (error) {
     return null;
@@ -43,7 +52,7 @@ export const verifyAccessToken = (token: string): TokenPayload | null => {
 
 export const verifyRefreshToken = (token: string): RefreshTokenPayload | null => {
   try {
-    const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as RefreshTokenPayload;
+    const decoded = jwt.verify(token, getJwtRefreshSecret()) as RefreshTokenPayload;
     return decoded;
   } catch (error) {
     return null;

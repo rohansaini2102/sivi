@@ -1,80 +1,54 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  User,
   BookOpen,
   FileText,
   Trophy,
-  LogOut,
-  Settings,
-  Bell,
-  Search,
+  Target,
   ChevronRight,
   Clock,
-  Target,
-  TrendingUp,
-  Calendar,
   Play,
   Award,
-  BarChart3
+  Calendar,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { useRequireAuth } from '@/hooks/useAuth';
+import { PageHeader } from '@/components/layout';
+import { StatCard } from '@/components/cards';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { logout } = useAuthStore();
-  const { user, isLoading } = useRequireAuth();
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/');
-  };
-
-  // Show loading while checking auth
-  if (isLoading || !user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
+  const { user } = useAuthStore();
 
   const stats = [
     {
-      label: 'Courses Enrolled',
-      value: user.stats?.coursesCompleted || 0,
+      title: 'Courses Enrolled',
+      value: user?.stats?.coursesCompleted || 0,
       icon: BookOpen,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-600'
+      variant: 'primary' as const,
     },
     {
-      label: 'Tests Attempted',
-      value: user.stats?.testsAttempted || 0,
+      title: 'Tests Attempted',
+      value: user?.stats?.testsAttempted || 0,
       icon: FileText,
-      color: 'bg-emerald-500',
-      bgColor: 'bg-emerald-50',
-      textColor: 'text-emerald-600'
+      variant: 'success' as const,
     },
     {
-      label: 'Total Points',
-      value: user.stats?.totalPoints || 0,
+      title: 'Total Points',
+      value: user?.stats?.totalPoints || 0,
       icon: Trophy,
-      color: 'bg-amber-500',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600'
+      variant: 'warning' as const,
     },
     {
-      label: 'Avg Score',
-      value: `${user.stats?.avgScore || 0}%`,
+      title: 'Avg Score',
+      value: `${user?.stats?.avgScore || 0}%`,
       icon: Target,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-600'
+      variant: 'default' as const,
     },
   ];
 
@@ -84,21 +58,21 @@ export default function DashboardPage() {
       description: 'Explore our course library',
       icon: BookOpen,
       href: '/courses',
-      color: 'bg-blue-600 hover:bg-blue-700'
+      color: 'bg-primary hover:bg-primary-dark',
     },
     {
       label: 'Test Series',
       description: 'Practice with mock tests',
       icon: FileText,
       href: '/test-series',
-      color: 'bg-emerald-600 hover:bg-emerald-700'
+      color: 'bg-emerald-600 hover:bg-emerald-700',
     },
     {
-      label: 'Free Tests',
-      description: 'Try free practice tests',
-      icon: Play,
-      href: '/free-tests',
-      color: 'bg-purple-600 hover:bg-purple-700'
+      label: 'My Results',
+      description: 'View your performance',
+      icon: Target,
+      href: '/dashboard/performance',
+      color: 'bg-purple-600 hover:bg-purple-700',
     },
   ];
 
@@ -110,7 +84,7 @@ export default function DashboardPage() {
       time: '2 hours ago',
       icon: FileText,
       iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600'
+      iconColor: 'text-emerald-600',
     },
     {
       type: 'course',
@@ -118,8 +92,8 @@ export default function DashboardPage() {
       subtitle: 'Completed',
       time: 'Yesterday',
       icon: BookOpen,
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600'
+      iconBg: 'bg-primary/10',
+      iconColor: 'text-primary',
     },
     {
       type: 'achievement',
@@ -128,265 +102,233 @@ export default function DashboardPage() {
       time: '2 days ago',
       icon: Award,
       iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600'
+      iconColor: 'text-amber-600',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-gradient-to-br from-primary to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
-              <span className="font-bold text-lg text-gray-900 hidden sm:block">
-                Sivi<span className="text-primary">Academy</span>
-              </span>
+    <div className="space-y-6">
+      {/* Welcome Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl bg-primary p-6 text-primary-foreground"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">
+              Welcome back, {user?.name?.split(' ')[0] || 'Student'}!
+            </h1>
+            <p className="mt-1 text-primary-foreground/80">
+              Continue your learning journey and ace your exams
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            className="w-fit bg-white text-primary hover:bg-white/90"
+            asChild
+          >
+            <Link href="/courses">
+              <Play className="mr-2 h-4 w-4" />
+              Continue Learning
             </Link>
+          </Button>
+        </div>
+      </motion.div>
 
-            {/* Search */}
-            <div className="flex-1 max-w-md mx-4 hidden md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search courses, tests..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                />
-              </div>
-            </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <StatCard
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+              variant={stat.variant}
+            />
+          </motion.div>
+        ))}
+      </div>
 
-            {/* Right Side */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors relative">
-                <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-
-              <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gradient-to-br from-primary to-indigo-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium text-sm">
-                    {user.name?.charAt(0).toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                  <p className="text-xs text-gray-500">Student</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Logout"
-              >
-                <LogOut size={20} />
-              </button>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main Content - Left Column */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Quick Actions */}
+          <div>
+            <h2 className="mb-4 text-lg font-semibold text-foreground">
+              Quick Actions
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {quickActions.map((action, index) => (
+                <motion.div
+                  key={action.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + index * 0.1 }}
+                >
+                  <Link
+                    href={action.href}
+                    className={`${action.color} flex h-full flex-col rounded-xl p-5 text-white transition-all hover:shadow-lg`}
+                  >
+                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+                      <action.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold">{action.label}</h3>
+                    <p className="mt-1 text-sm text-white/80">
+                      {action.description}
+                    </p>
+                    <div className="mt-auto flex items-center gap-1 pt-4 text-sm font-medium">
+                      Explore
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          {/* Welcome Banner */}
-          <div className="bg-gradient-to-r from-primary via-blue-600 to-indigo-600 rounded-2xl p-6 sm:p-8 text-white mb-8 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-              }} />
-            </div>
-            <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, {user.name?.split(' ')[0]}!</h1>
-                  <p className="text-blue-100">Continue your learning journey and ace your exams</p>
-                </div>
+          {/* Continue Learning */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Continue Learning</CardTitle>
                 <Link
-                  href="/courses"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary font-medium rounded-xl hover:bg-blue-50 transition-colors w-fit"
+                  href="/dashboard/courses"
+                  className="text-sm font-medium text-primary hover:underline"
                 >
-                  <Play size={18} />
-                  Continue Learning
+                  View All
                 </Link>
               </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl p-5 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`w-10 h-10 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
-                    <stat.icon className={stat.textColor} size={20} />
-                  </div>
-                  <TrendingUp className="text-emerald-500 w-4 h-4" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500">
+                  <BookOpen className="h-6 w-6 text-white" />
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
-            {/* Quick Actions */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
-              </div>
-              <div className="grid sm:grid-cols-3 gap-4">
-                {quickActions.map((action, index) => (
-                  <motion.div
-                    key={action.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + index * 0.1 }}
-                  >
-                    <Link
-                      href={action.href}
-                      className={`${action.color} text-white rounded-xl p-5 flex flex-col h-full transition-all hover:shadow-lg group`}
-                    >
-                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mb-4">
-                        <action.icon size={20} />
-                      </div>
-                      <h3 className="font-semibold mb-1">{action.label}</h3>
-                      <p className="text-sm text-white/80">{action.description}</p>
-                      <div className="mt-auto pt-4 flex items-center gap-1 text-sm font-medium">
-                        Explore
-                        <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Continue Where You Left */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Continue Learning</h2>
-                  <Link href="/my-courses" className="text-sm text-primary font-medium hover:text-blue-700">
-                    View All
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-semibold text-foreground">
+                    Rajasthan GK Complete Course
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Chapter 5: History of Rajasthan
+                  </p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Progress value={35} className="h-2 flex-1" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      35%
+                    </span>
+                  </div>
+                </div>
+                <Button size="icon" className="hidden sm:flex" asChild>
+                  <Link href="/dashboard/courses/1">
+                    <Play className="h-4 w-4" />
                   </Link>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-100 p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <BookOpen className="text-white" size={24} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 mb-1 truncate">Rajasthan GK Complete Course</h3>
-                      <p className="text-sm text-gray-500 mb-2">Chapter 5: History of Rajasthan</p>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: '35%' }}></div>
-                        </div>
-                        <span className="text-sm font-medium text-gray-600">35%</span>
-                      </div>
-                    </div>
-                    <Link
-                      href="/courses/rajasthan-gk"
-                      className="hidden sm:flex items-center justify-center w-10 h-10 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <Play size={18} />
-                    </Link>
-                  </div>
-                </div>
+                </Button>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Recent Activity */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-                <button className="text-sm text-primary font-medium hover:text-blue-700">
+        {/* Sidebar - Right Column */}
+        <div className="space-y-6">
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Recent Activity</CardTitle>
+                <Link
+                  href="/dashboard/performance"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
                   See All
-                </button>
+                </Link>
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100">
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
                 {recentActivity.map((activity, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + index * 0.1 }}
-                    className="p-4 hover:bg-gray-50 transition-colors"
+                    className="flex items-start gap-3 p-4 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-9 h-9 ${activity.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                        <activity.icon className={activity.iconColor} size={16} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm truncate">{activity.title}</p>
-                        <p className="text-xs text-gray-500">{activity.subtitle}</p>
-                      </div>
-                      <span className="text-xs text-gray-400 flex-shrink-0">{activity.time}</span>
+                    <div
+                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${activity.iconBg}`}
+                    >
+                      <activity.icon
+                        className={`h-4 w-4 ${activity.iconColor}`}
+                      />
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {activity.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {activity.subtitle}
+                      </p>
+                    </div>
+                    <span className="flex-shrink-0 text-xs text-muted-foreground">
+                      {activity.time}
+                    </span>
                   </motion.div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Upcoming Test */}
-              <div className="mt-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Test</h2>
-                <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl p-5 text-white">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calendar size={16} />
-                    <span className="text-sm text-purple-200">Tomorrow, 10:00 AM</span>
-                  </div>
-                  <h3 className="font-semibold mb-2">RAS Prelims Full Mock Test</h3>
-                  <p className="text-sm text-purple-200 mb-4">150 Questions • 3 Hours</p>
-                  <Link
-                    href="/test-series/ras-prelims"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Clock size={14} />
-                    Set Reminder
-                  </Link>
+          {/* Upcoming Test */}
+          <Card className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-0">
+            <CardContent className="p-5">
+              <div className="mb-3 flex items-center gap-2 text-purple-200">
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm">Tomorrow, 10:00 AM</span>
+              </div>
+              <h3 className="mb-2 font-semibold">RAS Prelims Full Mock Test</h3>
+              <p className="mb-4 text-sm text-purple-200">
+                150 Questions • 3 Hours
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="bg-white/20 text-white hover:bg-white/30"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                Set Reminder
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Shop CTA */}
+          <Card className="border-dashed">
+            <CardContent className="p-5 text-center">
+              <div className="mb-3 flex justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <BookOpen className="h-6 w-6 text-primary" />
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Bottom Navigation Links */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
-              <Link href="/profile" className="text-gray-600 hover:text-primary flex items-center gap-1.5">
-                <User size={16} />
-                Profile
-              </Link>
-              <Link href="/settings" className="text-gray-600 hover:text-primary flex items-center gap-1.5">
-                <Settings size={16} />
-                Settings
-              </Link>
-              <Link href="/analytics" className="text-gray-600 hover:text-primary flex items-center gap-1.5">
-                <BarChart3 size={16} />
-                Analytics
-              </Link>
-              <Link href="/" className="text-gray-600 hover:text-primary">
-                Back to Home
-              </Link>
-            </div>
-          </div>
-        </motion.div>
-      </main>
+              <h3 className="font-semibold text-foreground">
+                Explore More Courses
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Discover new courses and test series to boost your preparation
+              </p>
+              <Button className="mt-4 w-full" asChild>
+                <Link href="/courses">
+                  Browse Courses
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
