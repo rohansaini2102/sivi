@@ -16,6 +16,9 @@ import adminRoutes from './routes/admin.routes';
 
 const app: Application = express();
 
+// Trust proxy (required for Cloud Run, Railway, Heroku, etc.)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({

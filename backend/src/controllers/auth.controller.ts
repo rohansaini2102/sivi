@@ -100,7 +100,7 @@ export const verifyOTPController = async (req: Request, res: Response) => {
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -204,7 +204,7 @@ export const adminVerifyOTPController = async (req: Request, res: Response) => {
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -307,7 +307,7 @@ export const refreshTokenController = async (req: Request, res: Response) => {
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -331,7 +331,7 @@ export const logoutController = async (req: Request, res: Response) => {
     res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin (Vercel → Cloud Run)
     });
 
     return res.status(200).json({
