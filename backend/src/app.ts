@@ -13,6 +13,7 @@ import learnRoutes from './routes/learn.routes';
 import testRoutes from './routes/test.routes';
 import userRoutes from './routes/user.routes';
 import adminRoutes from './routes/admin.routes';
+import paymentRoutes from './routes/payment.routes';
 
 const app: Application = express();
 
@@ -56,6 +57,7 @@ app.use('/api/learn', learnRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

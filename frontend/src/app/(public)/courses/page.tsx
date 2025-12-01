@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search,
   Filter,
-  ChevronDown,
   BookOpen,
   Grid3X3,
   List,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,110 +30,31 @@ import {
 import { CourseCard } from '@/components/cards';
 import Header from '@/components/Header';
 
-// Mock data - will be replaced with API calls
-const mockCourses = [
-  {
-    id: '1',
-    title: 'RAS Complete Course 2024',
-    shortDescription: 'Comprehensive preparation for Rajasthan Administrative Service exam with all subjects covered.',
-    thumbnail: '',
-    category: 'RAS',
-    price: 2999,
-    discountPrice: 1999,
-    validityDays: 365,
-    language: 'both' as const,
-    level: 'intermediate' as const,
-    rating: 4.8,
-    ratingCount: 1250,
-    enrollmentCount: 5400,
-    totalLessons: 180,
-    isFree: false,
-  },
-  {
-    id: '2',
-    title: 'REET Level 1 & 2 Complete',
-    shortDescription: 'Complete preparation for REET Level 1 and Level 2 with practice questions.',
-    thumbnail: '',
-    category: 'REET',
-    price: 1499,
-    discountPrice: 999,
-    validityDays: 180,
-    language: 'hi' as const,
-    level: 'beginner' as const,
-    rating: 4.6,
-    ratingCount: 890,
-    enrollmentCount: 3200,
-    totalLessons: 120,
-    isFree: false,
-  },
-  {
-    id: '3',
-    title: 'Rajasthan Patwar Exam Course',
-    shortDescription: 'Targeted preparation for Patwar examination with all important topics.',
-    thumbnail: '',
-    category: 'PATWAR',
-    price: 999,
-    discountPrice: 699,
-    validityDays: 120,
-    language: 'hi' as const,
-    level: 'beginner' as const,
-    rating: 4.5,
-    ratingCount: 650,
-    enrollmentCount: 2100,
-    totalLessons: 80,
-    isFree: false,
-  },
-  {
-    id: '4',
-    title: 'Rajasthan Police Constable',
-    shortDescription: 'Complete course for Rajasthan Police Constable recruitment exam.',
-    thumbnail: '',
-    category: 'POLICE',
-    price: 799,
-    discountPrice: 499,
-    validityDays: 90,
-    language: 'hi' as const,
-    level: 'beginner' as const,
-    rating: 4.4,
-    ratingCount: 420,
-    enrollmentCount: 1800,
-    totalLessons: 60,
-    isFree: false,
-  },
-  {
-    id: '5',
-    title: 'RPSC 1st Grade Teacher',
-    shortDescription: 'Comprehensive preparation for RPSC 1st Grade Teacher exam.',
-    thumbnail: '',
-    category: 'RPSC',
-    price: 1999,
-    discountPrice: 1499,
-    validityDays: 180,
-    language: 'both' as const,
-    level: 'advanced' as const,
-    rating: 4.7,
-    ratingCount: 380,
-    enrollmentCount: 1200,
-    totalLessons: 150,
-    isFree: false,
-  },
-  {
-    id: '6',
-    title: 'Free: Rajasthan GK Basics',
-    shortDescription: 'Free introductory course covering Rajasthan General Knowledge basics.',
-    thumbnail: '',
-    category: 'OTHER',
-    price: 0,
-    validityDays: 30,
-    language: 'hi' as const,
-    level: 'beginner' as const,
-    rating: 4.3,
-    ratingCount: 2100,
-    enrollmentCount: 8500,
-    totalLessons: 20,
-    isFree: true,
-  },
-];
+interface Course {
+  _id: string;
+  title: string;
+  slug: string;
+  shortDescription?: string;
+  thumbnail?: string;
+  examCategory: string;
+  price: number;
+  discountPrice?: number;
+  validityDays: number;
+  language: 'hi' | 'en' | 'both';
+  level: 'beginner' | 'intermediate' | 'advanced';
+  rating: number;
+  ratingCount: number;
+  enrollmentCount: number;
+  totalLessons: number;
+  isFree: boolean;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
 
 const categories = [
   { value: 'all', label: 'All Categories' },
@@ -169,6 +89,14 @@ const sortOptions = [
 ];
 
 export default function CoursesPage() {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [level, setLevel] = useState('all');
@@ -177,46 +105,55 @@ export default function CoursesPage() {
   const [priceFilter, setPriceFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Filter courses
-  const filteredCourses = mockCourses.filter((course) => {
-    if (searchQuery && !course.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (category !== 'all' && course.category !== category) {
-      return false;
-    }
-    if (level !== 'all' && course.level !== level) {
-      return false;
-    }
-    if (language !== 'all' && course.language !== language) {
-      return false;
-    }
-    if (priceFilter === 'free' && !course.isFree) {
-      return false;
-    }
-    if (priceFilter === 'paid' && course.isFree) {
-      return false;
-    }
-    return true;
-  });
+  const fetchCourses = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(pagination.page),
+        limit: String(pagination.limit),
+        ...(searchQuery && { search: searchQuery }),
+        ...(category !== 'all' && { category }),
+        ...(level !== 'all' && { level }),
+        ...(language !== 'all' && { language }),
+        ...(priceFilter === 'free' && { isFree: 'true' }),
+        sortBy: sortBy === 'popular' ? 'enrollmentCount' :
+                sortBy === 'newest' ? 'createdAt' :
+                sortBy === 'price-low' ? 'price' :
+                sortBy === 'price-high' ? 'price' :
+                sortBy === 'rating' ? 'rating' : 'enrollmentCount',
+        sortOrder: sortBy === 'price-low' ? 'asc' : 'desc',
+      });
 
-  // Sort courses
-  const sortedCourses = [...filteredCourses].sort((a, b) => {
-    switch (sortBy) {
-      case 'popular':
-        return b.enrollmentCount - a.enrollmentCount;
-      case 'newest':
-        return 0; // Would sort by date in real implementation
-      case 'price-low':
-        return (a.discountPrice || a.price) - (b.discountPrice || b.price);
-      case 'price-high':
-        return (b.discountPrice || b.price) - (a.discountPrice || a.price);
-      case 'rating':
-        return b.rating - a.rating;
-      default:
-        return 0;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/store/courses?${params}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setCourses(data.data.courses);
+        setPagination(data.data.pagination);
+      }
+    } catch (error) {
+      console.error('Failed to fetch courses:', error);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, [pagination.page, pagination.limit, searchQuery, category, level, language, priceFilter, sortBy]);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      fetchCourses();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [fetchCourses]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setCategory('all');
+    setLevel('all');
+    setLanguage('all');
+    setPriceFilter('all');
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -229,7 +166,10 @@ export default function CoursesPage() {
               key={cat.value}
               variant={category === cat.value ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => setCategory(cat.value)}
+              onClick={() => {
+                setCategory(cat.value);
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
             >
               {cat.label}
             </Badge>
@@ -246,7 +186,10 @@ export default function CoursesPage() {
               key={lvl.value}
               variant={level === lvl.value ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => setLevel(lvl.value)}
+              onClick={() => {
+                setLevel(lvl.value);
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
             >
               {lvl.label}
             </Badge>
@@ -263,7 +206,10 @@ export default function CoursesPage() {
               key={lang.value}
               variant={language === lang.value ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => setLanguage(lang.value)}
+              onClick={() => {
+                setLanguage(lang.value);
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
             >
               {lang.label}
             </Badge>
@@ -278,21 +224,30 @@ export default function CoursesPage() {
           <Badge
             variant={priceFilter === 'all' ? 'default' : 'outline'}
             className="cursor-pointer"
-            onClick={() => setPriceFilter('all')}
+            onClick={() => {
+              setPriceFilter('all');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
           >
             All
           </Badge>
           <Badge
             variant={priceFilter === 'free' ? 'default' : 'outline'}
             className="cursor-pointer"
-            onClick={() => setPriceFilter('free')}
+            onClick={() => {
+              setPriceFilter('free');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
           >
             Free
           </Badge>
           <Badge
             variant={priceFilter === 'paid' ? 'default' : 'outline'}
             className="cursor-pointer"
-            onClick={() => setPriceFilter('paid')}
+            onClick={() => {
+              setPriceFilter('paid');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
           >
             Paid
           </Badge>
@@ -300,16 +255,7 @@ export default function CoursesPage() {
       </div>
 
       {/* Clear Filters */}
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => {
-          setCategory('all');
-          setLevel('all');
-          setLanguage('all');
-          setPriceFilter('all');
-        }}
-      >
+      <Button variant="outline" className="w-full" onClick={clearFilters}>
         Clear Filters
       </Button>
     </div>
@@ -338,7 +284,10 @@ export default function CoursesPage() {
                   type="search"
                   placeholder="Search courses..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPagination((p) => ({ ...p, page: 1 }));
+                  }}
                   className="pl-10"
                 />
               </div>
@@ -380,12 +329,22 @@ export default function CoursesPage() {
             {/* Toolbar */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Showing <span className="font-medium text-foreground">{sortedCourses.length}</span> courses
+                {isLoading ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    Showing <span className="font-medium text-foreground">{courses.length}</span> of{' '}
+                    <span className="font-medium text-foreground">{pagination.total}</span> courses
+                  </>
+                )}
               </p>
 
               <div className="flex items-center gap-3">
                 {/* Sort */}
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select value={sortBy} onValueChange={(value) => {
+                  setSortBy(value);
+                  setPagination((p) => ({ ...p, page: 1 }));
+                }}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -421,7 +380,11 @@ export default function CoursesPage() {
             </div>
 
             {/* Courses */}
-            {sortedCourses.length === 0 ? (
+            {isLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : courses.length === 0 ? (
               <div className="py-16 text-center">
                 <BookOpen className="mx-auto h-12 w-12 text-muted-foreground/50" />
                 <h3 className="mt-4 text-lg font-semibold text-foreground">
@@ -430,39 +393,71 @@ export default function CoursesPage() {
                 <p className="mt-2 text-muted-foreground">
                   Try adjusting your filters or search query
                 </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setCategory('all');
-                    setLevel('all');
-                    setLanguage('all');
-                    setPriceFilter('all');
-                  }}
-                >
+                <Button variant="outline" className="mt-4" onClick={clearFilters}>
                   Clear all filters
                 </Button>
               </div>
             ) : (
-              <div
-                className={
-                  viewMode === 'grid'
-                    ? 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3'
-                    : 'space-y-4'
-                }
-              >
-                {sortedCourses.map((course, index) => (
-                  <motion.div
-                    key={course.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <CourseCard {...course} variant="shop" />
-                  </motion.div>
-                ))}
-              </div>
+              <>
+                <div
+                  className={
+                    viewMode === 'grid'
+                      ? 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3'
+                      : 'space-y-4'
+                  }
+                >
+                  {courses.map((course, index) => (
+                    <motion.div
+                      key={course._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <CourseCard
+                        id={course.slug}
+                        title={course.title}
+                        shortDescription={course.shortDescription}
+                        thumbnail={course.thumbnail}
+                        category={course.examCategory}
+                        price={course.price}
+                        discountPrice={course.discountPrice}
+                        validityDays={course.validityDays}
+                        language={course.language}
+                        level={course.level}
+                        rating={course.rating}
+                        ratingCount={course.ratingCount}
+                        enrollmentCount={course.enrollmentCount}
+                        totalLessons={course.totalLessons}
+                        isFree={course.isFree}
+                        variant="shop"
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="mt-8 flex justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={pagination.page === 1}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="flex items-center px-4 text-sm text-muted-foreground">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      disabled={pagination.page >= pagination.totalPages}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

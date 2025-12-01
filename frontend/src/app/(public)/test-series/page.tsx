@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search,
@@ -9,6 +8,7 @@ import {
   FileText,
   Grid3X3,
   List,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,144 +30,31 @@ import {
 import { TestSeriesCard } from '@/components/cards';
 import Header from '@/components/Header';
 
-// Mock data - will be replaced with API calls
-const mockTestSeries = [
-  {
-    id: '1',
-    title: 'RAS Prelims Mock Test Series 2024',
-    shortDescription: 'Complete mock test series for RAS Prelims with detailed solutions and performance analysis.',
-    thumbnail: '',
-    category: 'RAS',
-    price: 1499,
-    discountPrice: 999,
-    validityDays: 180,
-    language: 'both' as const,
-    totalExams: 25,
-    freeExams: 3,
-    rating: 4.9,
-    ratingCount: 2100,
-    enrollmentCount: 8500,
-    isFree: false,
-  },
-  {
-    id: '2',
-    title: 'REET Level 1 Practice Tests',
-    shortDescription: 'Practice tests designed for REET Level 1 examination with topic-wise breakdown.',
-    thumbnail: '',
-    category: 'REET',
-    price: 799,
-    discountPrice: 599,
-    validityDays: 120,
-    language: 'hi' as const,
-    totalExams: 20,
-    freeExams: 2,
-    rating: 4.7,
-    ratingCount: 1560,
-    enrollmentCount: 6200,
-    isFree: false,
-  },
-  {
-    id: '3',
-    title: 'REET Level 2 Practice Tests',
-    shortDescription: 'Comprehensive practice tests for REET Level 2 with subject-wise questions.',
-    thumbnail: '',
-    category: 'REET',
-    price: 899,
-    discountPrice: 699,
-    validityDays: 120,
-    language: 'hi' as const,
-    totalExams: 22,
-    freeExams: 2,
-    rating: 4.6,
-    ratingCount: 980,
-    enrollmentCount: 4100,
-    isFree: false,
-  },
-  {
-    id: '4',
-    title: 'Rajasthan Patwar Test Series',
-    shortDescription: 'Previous year pattern based tests for Rajasthan Patwar recruitment exam.',
-    thumbnail: '',
-    category: 'PATWAR',
-    price: 599,
-    discountPrice: 399,
-    validityDays: 90,
-    language: 'hi' as const,
-    totalExams: 15,
-    freeExams: 2,
-    rating: 4.5,
-    ratingCount: 720,
-    enrollmentCount: 3400,
-    isFree: false,
-  },
-  {
-    id: '5',
-    title: 'Rajasthan Police Constable Tests',
-    shortDescription: 'Mock tests based on latest exam pattern for Rajasthan Police Constable exam.',
-    thumbnail: '',
-    category: 'POLICE',
-    price: 499,
-    discountPrice: 349,
-    validityDays: 90,
-    language: 'hi' as const,
-    totalExams: 12,
-    freeExams: 1,
-    rating: 4.4,
-    ratingCount: 540,
-    enrollmentCount: 2800,
-    isFree: false,
-  },
-  {
-    id: '6',
-    title: 'RAS Mains Test Series',
-    shortDescription: 'Descriptive answer practice for RAS Mains with expert evaluation.',
-    thumbnail: '',
-    category: 'RAS',
-    price: 2499,
-    discountPrice: 1999,
-    validityDays: 365,
-    language: 'both' as const,
-    totalExams: 30,
-    freeExams: 2,
-    rating: 4.8,
-    ratingCount: 650,
-    enrollmentCount: 2100,
-    isFree: false,
-  },
-  {
-    id: '7',
-    title: 'RPSC 1st Grade Teacher Tests',
-    shortDescription: 'Subject-wise mock tests for RPSC 1st Grade Teacher examination.',
-    thumbnail: '',
-    category: 'RPSC',
-    price: 1299,
-    discountPrice: 999,
-    validityDays: 180,
-    language: 'both' as const,
-    totalExams: 18,
-    freeExams: 2,
-    rating: 4.7,
-    ratingCount: 420,
-    enrollmentCount: 1600,
-    isFree: false,
-  },
-  {
-    id: '8',
-    title: 'Free: Rajasthan GK Practice Tests',
-    shortDescription: 'Free practice tests to assess your Rajasthan GK knowledge.',
-    thumbnail: '',
-    category: 'OTHER',
-    price: 0,
-    validityDays: 30,
-    language: 'hi' as const,
-    totalExams: 5,
-    freeExams: 5,
-    rating: 4.3,
-    ratingCount: 3200,
-    enrollmentCount: 12000,
-    isFree: true,
-  },
-];
+interface TestSeries {
+  _id: string;
+  title: string;
+  slug: string;
+  shortDescription?: string;
+  thumbnail?: string;
+  examCategory: string;
+  price: number;
+  discountPrice?: number;
+  validityDays: number;
+  language: 'hi' | 'en' | 'both';
+  totalExams: number;
+  freeExams: number;
+  rating: number;
+  ratingCount: number;
+  enrollmentCount: number;
+  isFree: boolean;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
 
 const categories = [
   { value: 'all', label: 'All Categories' },
@@ -196,6 +83,14 @@ const sortOptions = [
 ];
 
 export default function TestSeriesPage() {
+  const [testSeries, setTestSeries] = useState<TestSeries[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [language, setLanguage] = useState('all');
@@ -203,45 +98,54 @@ export default function TestSeriesPage() {
   const [priceFilter, setPriceFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Filter test series
-  const filteredTestSeries = mockTestSeries.filter((series) => {
-    if (searchQuery && !series.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (category !== 'all' && series.category !== category) {
-      return false;
-    }
-    if (language !== 'all' && series.language !== language) {
-      return false;
-    }
-    if (priceFilter === 'free' && !series.isFree) {
-      return false;
-    }
-    if (priceFilter === 'paid' && series.isFree) {
-      return false;
-    }
-    return true;
-  });
+  const fetchTestSeries = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(pagination.page),
+        limit: String(pagination.limit),
+        ...(searchQuery && { search: searchQuery }),
+        ...(category !== 'all' && { category }),
+        ...(language !== 'all' && { language }),
+        ...(priceFilter === 'free' && { isFree: 'true' }),
+        sortBy: sortBy === 'popular' ? 'enrollmentCount' :
+                sortBy === 'newest' ? 'createdAt' :
+                sortBy === 'price-low' ? 'price' :
+                sortBy === 'price-high' ? 'price' :
+                sortBy === 'rating' ? 'rating' :
+                sortBy === 'tests' ? 'totalExams' : 'enrollmentCount',
+        sortOrder: sortBy === 'price-low' ? 'asc' : 'desc',
+      });
 
-  // Sort test series
-  const sortedTestSeries = [...filteredTestSeries].sort((a, b) => {
-    switch (sortBy) {
-      case 'popular':
-        return b.enrollmentCount - a.enrollmentCount;
-      case 'newest':
-        return 0; // Would sort by date in real implementation
-      case 'price-low':
-        return (a.discountPrice || a.price) - (b.discountPrice || b.price);
-      case 'price-high':
-        return (b.discountPrice || b.price) - (a.discountPrice || a.price);
-      case 'rating':
-        return b.rating - a.rating;
-      case 'tests':
-        return b.totalExams - a.totalExams;
-      default:
-        return 0;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/store/test-series?${params}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setTestSeries(data.data.testSeries);
+        setPagination(data.data.pagination);
+      }
+    } catch (error) {
+      console.error('Failed to fetch test series:', error);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, [pagination.page, pagination.limit, searchQuery, category, language, priceFilter, sortBy]);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      fetchTestSeries();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [fetchTestSeries]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setCategory('all');
+    setLanguage('all');
+    setPriceFilter('all');
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -254,7 +158,10 @@ export default function TestSeriesPage() {
               key={cat.value}
               variant={category === cat.value ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => setCategory(cat.value)}
+              onClick={() => {
+                setCategory(cat.value);
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
             >
               {cat.label}
             </Badge>
@@ -271,7 +178,10 @@ export default function TestSeriesPage() {
               key={lang.value}
               variant={language === lang.value ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => setLanguage(lang.value)}
+              onClick={() => {
+                setLanguage(lang.value);
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
             >
               {lang.label}
             </Badge>
@@ -286,21 +196,30 @@ export default function TestSeriesPage() {
           <Badge
             variant={priceFilter === 'all' ? 'default' : 'outline'}
             className="cursor-pointer"
-            onClick={() => setPriceFilter('all')}
+            onClick={() => {
+              setPriceFilter('all');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
           >
             All
           </Badge>
           <Badge
             variant={priceFilter === 'free' ? 'default' : 'outline'}
             className="cursor-pointer"
-            onClick={() => setPriceFilter('free')}
+            onClick={() => {
+              setPriceFilter('free');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
           >
             Free
           </Badge>
           <Badge
             variant={priceFilter === 'paid' ? 'default' : 'outline'}
             className="cursor-pointer"
-            onClick={() => setPriceFilter('paid')}
+            onClick={() => {
+              setPriceFilter('paid');
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}
           >
             Paid
           </Badge>
@@ -308,15 +227,7 @@ export default function TestSeriesPage() {
       </div>
 
       {/* Clear Filters */}
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => {
-          setCategory('all');
-          setLanguage('all');
-          setPriceFilter('all');
-        }}
-      >
+      <Button variant="outline" className="w-full" onClick={clearFilters}>
         Clear Filters
       </Button>
     </div>
@@ -345,7 +256,10 @@ export default function TestSeriesPage() {
                   type="search"
                   placeholder="Search test series..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPagination((p) => ({ ...p, page: 1 }));
+                  }}
                   className="pl-10"
                 />
               </div>
@@ -387,12 +301,22 @@ export default function TestSeriesPage() {
             {/* Toolbar */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Showing <span className="font-medium text-foreground">{sortedTestSeries.length}</span> test series
+                {isLoading ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    Showing <span className="font-medium text-foreground">{testSeries.length}</span> of{' '}
+                    <span className="font-medium text-foreground">{pagination.total}</span> test series
+                  </>
+                )}
               </p>
 
               <div className="flex items-center gap-3">
                 {/* Sort */}
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select value={sortBy} onValueChange={(value) => {
+                  setSortBy(value);
+                  setPagination((p) => ({ ...p, page: 1 }));
+                }}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -428,7 +352,11 @@ export default function TestSeriesPage() {
             </div>
 
             {/* Test Series */}
-            {sortedTestSeries.length === 0 ? (
+            {isLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : testSeries.length === 0 ? (
               <div className="py-16 text-center">
                 <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
                 <h3 className="mt-4 text-lg font-semibold text-foreground">
@@ -437,38 +365,71 @@ export default function TestSeriesPage() {
                 <p className="mt-2 text-muted-foreground">
                   Try adjusting your filters or search query
                 </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setCategory('all');
-                    setLanguage('all');
-                    setPriceFilter('all');
-                  }}
-                >
+                <Button variant="outline" className="mt-4" onClick={clearFilters}>
                   Clear all filters
                 </Button>
               </div>
             ) : (
-              <div
-                className={
-                  viewMode === 'grid'
-                    ? 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3'
-                    : 'space-y-4'
-                }
-              >
-                {sortedTestSeries.map((series, index) => (
-                  <motion.div
-                    key={series.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <TestSeriesCard {...series} variant="shop" />
-                  </motion.div>
-                ))}
-              </div>
+              <>
+                <div
+                  className={
+                    viewMode === 'grid'
+                      ? 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3'
+                      : 'space-y-4'
+                  }
+                >
+                  {testSeries.map((series, index) => (
+                    <motion.div
+                      key={series._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <TestSeriesCard
+                        id={series.slug}
+                        title={series.title}
+                        shortDescription={series.shortDescription}
+                        thumbnail={series.thumbnail}
+                        category={series.examCategory}
+                        price={series.price}
+                        discountPrice={series.discountPrice}
+                        validityDays={series.validityDays}
+                        language={series.language}
+                        totalExams={series.totalExams}
+                        freeExams={series.freeExams}
+                        rating={series.rating}
+                        ratingCount={series.ratingCount}
+                        enrollmentCount={series.enrollmentCount}
+                        isFree={series.isFree}
+                        variant="shop"
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="mt-8 flex justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={pagination.page === 1}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="flex items-center px-4 text-sm text-muted-foreground">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      disabled={pagination.page >= pagination.totalPages}
+                      onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

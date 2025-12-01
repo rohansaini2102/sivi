@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   Clock,
   Users,
@@ -18,6 +16,7 @@ import {
   ChevronUp,
   Lock,
   ShoppingCart,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,107 +25,40 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import Header from '@/components/Header';
 import { useAuthStore } from '@/store/authStore';
+import { toast } from 'sonner';
 
-// Mock data - will be replaced with API calls
-const mockCourse = {
-  id: '1',
-  slug: 'ras-complete-course-2024',
-  title: 'RAS Complete Course 2024',
-  shortDescription: 'Comprehensive preparation for Rajasthan Administrative Service exam with all subjects covered.',
-  description: `
-    <p>This comprehensive course is designed to help you prepare for the Rajasthan Administrative Service (RAS) examination. The course covers all subjects and topics as per the latest syllabus.</p>
+interface Subject {
+  _id: string;
+  title: string;
+  chapters: {
+    _id: string;
+    title: string;
+    lessons: number;
+  }[];
+}
 
-    <h3>What you'll learn:</h3>
-    <ul>
-      <li>Complete coverage of General Knowledge</li>
-      <li>Rajasthan History, Culture & Geography</li>
-      <li>Indian History & Polity</li>
-      <li>Economy & Current Affairs</li>
-      <li>Science & Technology</li>
-      <li>Reasoning & Mental Ability</li>
-    </ul>
-
-    <p>Our expert faculty provides detailed explanations with examples, practice questions, and regular assessments to track your progress.</p>
-  `,
-  thumbnail: '',
-  category: 'RAS',
-  price: 2999,
-  discountPrice: 1999,
-  validityDays: 365,
-  language: 'both',
-  level: 'intermediate',
-  rating: 4.8,
-  ratingCount: 1250,
-  enrollmentCount: 5400,
-  totalLessons: 180,
-  totalDuration: 120, // hours
-  isFree: false,
-  isPublished: true,
-  features: [
-    '180+ Video Lessons',
-    'Downloadable Study Material',
-    '5000+ Practice Questions',
-    'Live Doubt Sessions',
-    '10 Full Mock Tests',
-    'Certificate of Completion',
-  ],
-  subjects: [
-    {
-      id: 's1',
-      title: 'General Knowledge',
-      chapters: [
-        { id: 'c1', title: 'Indian History', lessons: 15 },
-        { id: 'c2', title: 'Indian Geography', lessons: 12 },
-        { id: 'c3', title: 'Indian Polity', lessons: 18 },
-        { id: 'c4', title: 'Indian Economy', lessons: 10 },
-      ],
-    },
-    {
-      id: 's2',
-      title: 'Rajasthan GK',
-      chapters: [
-        { id: 'c5', title: 'Rajasthan History', lessons: 20 },
-        { id: 'c6', title: 'Rajasthan Geography', lessons: 15 },
-        { id: 'c7', title: 'Rajasthan Culture', lessons: 12 },
-        { id: 'c8', title: 'Rajasthan Economy', lessons: 8 },
-      ],
-    },
-    {
-      id: 's3',
-      title: 'Science & Technology',
-      chapters: [
-        { id: 'c9', title: 'General Science', lessons: 20 },
-        { id: 'c10', title: 'Computer Knowledge', lessons: 10 },
-        { id: 'c11', title: 'Current Technology', lessons: 8 },
-      ],
-    },
-    {
-      id: 's4',
-      title: 'Reasoning & Mental Ability',
-      chapters: [
-        { id: 'c12', title: 'Logical Reasoning', lessons: 15 },
-        { id: 'c13', title: 'Analytical Reasoning', lessons: 12 },
-        { id: 'c14', title: 'Mental Ability', lessons: 10 },
-      ],
-    },
-  ],
-  reviews: [
-    {
-      id: 'r1',
-      user: 'Rahul S.',
-      rating: 5,
-      comment: 'Excellent course! The content is comprehensive and well-structured.',
-      date: '2 weeks ago',
-    },
-    {
-      id: 'r2',
-      user: 'Priya M.',
-      rating: 4,
-      comment: 'Very helpful for RAS preparation. Good explanations.',
-      date: '1 month ago',
-    },
-  ],
-};
+interface Course {
+  _id: string;
+  slug: string;
+  title: string;
+  shortDescription?: string;
+  description: string;
+  thumbnail?: string;
+  examCategory: string;
+  price: number;
+  discountPrice?: number;
+  validityDays: number;
+  language: 'hi' | 'en' | 'both';
+  level: 'beginner' | 'intermediate' | 'advanced';
+  rating: number;
+  ratingCount: number;
+  enrollmentCount: number;
+  totalLessons: number;
+  totalDuration: number;
+  isFree: boolean;
+  features: string[];
+  subjects: Subject[];
+}
 
 const categoryColors: Record<string, string> = {
   RAS: 'bg-indigo-100 text-indigo-700',
@@ -137,16 +69,53 @@ const categoryColors: Record<string, string> = {
   OTHER: 'bg-gray-100 text-gray-700',
 };
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-  const [expandedSubjects, setExpandedSubjects] = useState<string[]>(['s1']);
+  const { isAuthenticated, user } = useAuthStore();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [expandedSubjects, setExpandedSubjects] = useState<string[]>([]);
 
-  const course = mockCourse; // In real app, fetch based on params.slug
-  const hasDiscount = course.discountPrice && course.discountPrice < course.price;
+  useEffect(() => {
+    fetchCourse();
+  }, [params.slug]);
+
+  const fetchCourse = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/store/courses/${params.slug}`
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        setCourse(data.data);
+        if (data.data.subjects?.length > 0) {
+          setExpandedSubjects([data.data.subjects[0]._id]);
+        }
+      } else {
+        toast.error('Course not found');
+        router.push('/courses');
+      }
+    } catch (error) {
+      toast.error('Failed to load course');
+      router.push('/courses');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const hasDiscount = course?.discountPrice && course.discountPrice < course.price;
   const discountPercent = hasDiscount
-    ? Math.round(((course.price - course.discountPrice!) / course.price) * 100)
+    ? Math.round(((course!.price - course!.discountPrice!) / course!.price) * 100)
     : 0;
 
   const toggleSubject = (subjectId: string) => {
@@ -157,14 +126,133 @@ export default function CourseDetailPage() {
     );
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!isAuthenticated) {
       router.push(`/login?redirect=/courses/${params.slug}`);
       return;
     }
-    // Handle purchase flow
-    console.log('Proceed to payment');
+
+    if (!course) return;
+
+    // If course is free, directly enroll
+    if (course.isFree) {
+      toast.success('Enrolled successfully!');
+      router.push('/dashboard/courses');
+      return;
+    }
+
+    setIsPurchasing(true);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      // Create order
+      const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          itemId: course._id,
+          itemType: 'course',
+        }),
+      });
+
+      const orderData = await orderRes.json();
+
+      if (!orderData.success) {
+        throw new Error(orderData.error?.message || 'Failed to create order');
+      }
+
+      const { razorpayOrderId, amount, currency, paymentId } = orderData.data;
+
+      // Load Razorpay script if not loaded
+      if (!window.Razorpay) {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        document.body.appendChild(script);
+        await new Promise((resolve) => {
+          script.onload = resolve;
+        });
+      }
+
+      // Open Razorpay checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: amount,
+        currency: currency,
+        name: 'SiviAcademy',
+        description: course.title,
+        order_id: razorpayOrderId,
+        handler: async (response: any) => {
+          // Verify payment
+          try {
+            const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentId,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyData.success) {
+              toast.success('Payment successful! You are now enrolled.');
+              router.push('/dashboard/courses');
+            } else {
+              toast.error('Payment verification failed. Please contact support.');
+            }
+          } catch (error) {
+            toast.error('Payment verification failed');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        theme: {
+          color: '#6366F1',
+        },
+        modal: {
+          ondismiss: () => {
+            setIsPurchasing(false);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to initiate payment');
+    } finally {
+      setIsPurchasing(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -177,8 +265,8 @@ export default function CourseDetailPage() {
             {/* Course Info */}
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Badge className={categoryColors[course.category] || categoryColors.OTHER}>
-                  {course.category}
+                <Badge className={categoryColors[course.examCategory] || categoryColors.OTHER}>
+                  {course.examCategory}
                 </Badge>
                 <Badge variant="outline" className="border-slate-600 text-slate-300">
                   {course.level.charAt(0).toUpperCase() + course.level.slice(1)}
@@ -186,13 +274,15 @@ export default function CourseDetailPage() {
               </div>
 
               <h1 className="mt-4 text-3xl font-bold md:text-4xl">{course.title}</h1>
-              <p className="mt-3 text-lg text-slate-300">{course.shortDescription}</p>
+              {course.shortDescription && (
+                <p className="mt-3 text-lg text-slate-300">{course.shortDescription}</p>
+              )}
 
               {/* Meta Info */}
               <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-slate-400">
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span className="font-medium text-white">{course.rating}</span>
+                  <span className="font-medium text-white">{course.rating.toFixed(1)}</span>
                   <span>({course.ratingCount.toLocaleString()} reviews)</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -216,17 +306,19 @@ export default function CourseDetailPage() {
               </div>
 
               {/* Features (Desktop) */}
-              <div className="mt-8 hidden lg:block">
-                <h3 className="mb-3 text-lg font-semibold">What you&apos;ll get:</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {course.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 text-slate-300">
-                      <Check className="h-4 w-4 text-emerald-400" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
+              {course.features && course.features.length > 0 && (
+                <div className="mt-8 hidden lg:block">
+                  <h3 className="mb-3 text-lg font-semibold">What you&apos;ll get:</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {course.features.map((feature, index) => (
+                      <div key={index} className="flex items-center gap-2 text-slate-300">
+                        <Check className="h-4 w-4 text-emerald-400" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Pricing Card (Desktop) */}
@@ -246,16 +338,6 @@ export default function CourseDetailPage() {
                       <PlayCircle className="h-16 w-16 text-white/50" />
                     </div>
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <Button
-                      size="lg"
-                      variant="secondary"
-                      className="gap-2 rounded-full"
-                    >
-                      <PlayCircle className="h-5 w-5" />
-                      Preview Course
-                    </Button>
-                  </div>
                 </div>
 
                 <CardContent className="p-6">
@@ -284,8 +366,17 @@ export default function CourseDetailPage() {
                   </div>
 
                   {/* CTA */}
-                  <Button className="w-full" size="lg" onClick={handleBuyNow}>
-                    <ShoppingCart className="mr-2 h-5 w-5" />
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleBuyNow}
+                    disabled={isPurchasing}
+                  >
+                    {isPurchasing ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                    )}
                     {course.isFree ? 'Enroll Now' : 'Buy Now'}
                   </Button>
 
@@ -333,7 +424,10 @@ export default function CourseDetailPage() {
               </div>
             )}
           </div>
-          <Button size="lg" onClick={handleBuyNow}>
+          <Button size="lg" onClick={handleBuyNow} disabled={isPurchasing}>
+            {isPurchasing ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : null}
             {course.isFree ? 'Enroll Now' : 'Buy Now'}
           </Button>
         </div>
@@ -344,24 +438,26 @@ export default function CourseDetailPage() {
         <div className="flex flex-col gap-8 lg:flex-row">
           <div className="flex-1 space-y-8">
             {/* Features (Mobile) */}
-            <Card className="lg:hidden">
-              <CardContent className="p-5">
-                <h3 className="mb-4 text-lg font-semibold text-foreground">
-                  What you&apos;ll get:
-                </h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {course.features.map((feature, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 text-sm text-muted-foreground"
-                    >
-                      <Check className="h-4 w-4 text-emerald-500" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {course.features && course.features.length > 0 && (
+              <Card className="lg:hidden">
+                <CardContent className="p-5">
+                  <h3 className="mb-4 text-lg font-semibold text-foreground">
+                    What you&apos;ll get:
+                  </h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {course.features.map((feature, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <Check className="h-4 w-4 text-emerald-500" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Description */}
             <Card>
@@ -377,63 +473,63 @@ export default function CourseDetailPage() {
             </Card>
 
             {/* Curriculum */}
-            <Card>
-              <CardContent className="p-5">
-                <h2 className="mb-4 text-xl font-semibold text-foreground">
-                  Course Curriculum
-                </h2>
-                <div className="space-y-3">
-                  {course.subjects.map((subject) => (
-                    <div
-                      key={subject.id}
-                      className="rounded-lg border border-border overflow-hidden"
-                    >
-                      <button
-                        className="flex w-full items-center justify-between bg-muted/50 p-4 text-left transition-colors hover:bg-muted"
-                        onClick={() => toggleSubject(subject.id)}
+            {course.subjects && course.subjects.length > 0 && (
+              <Card>
+                <CardContent className="p-5">
+                  <h2 className="mb-4 text-xl font-semibold text-foreground">
+                    Course Curriculum
+                  </h2>
+                  <div className="space-y-3">
+                    {course.subjects.map((subject) => (
+                      <div
+                        key={subject._id}
+                        className="rounded-lg border border-border overflow-hidden"
                       >
-                        <div>
-                          <h3 className="font-medium text-foreground">
-                            {subject.title}
-                          </h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {subject.chapters.length} chapters •{' '}
-                            {subject.chapters.reduce((acc, ch) => acc + ch.lessons, 0)}{' '}
-                            lessons
-                          </p>
-                        </div>
-                        {expandedSubjects.includes(subject.id) ? (
-                          <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </button>
+                        <button
+                          className="flex w-full items-center justify-between bg-muted/50 p-4 text-left transition-colors hover:bg-muted"
+                          onClick={() => toggleSubject(subject._id)}
+                        >
+                          <div>
+                            <h3 className="font-medium text-foreground">
+                              {subject.title}
+                            </h3>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {subject.chapters?.length || 0} chapters
+                            </p>
+                          </div>
+                          {expandedSubjects.includes(subject._id) ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </button>
 
-                      {expandedSubjects.includes(subject.id) && (
-                        <div className="divide-y divide-border">
-                          {subject.chapters.map((chapter) => (
-                            <div
-                              key={chapter.id}
-                              className="flex items-center justify-between p-4"
-                            >
-                              <div className="flex items-center gap-3">
-                                <Lock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm text-foreground">
-                                  {chapter.title}
+                        {expandedSubjects.includes(subject._id) && subject.chapters && (
+                          <div className="divide-y divide-border">
+                            {subject.chapters.map((chapter) => (
+                              <div
+                                key={chapter._id}
+                                className="flex items-center justify-between p-4"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Lock className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm text-foreground">
+                                    {chapter.title}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {chapter.lessons} lessons
                                 </span>
                               </div>
-                              <span className="text-sm text-muted-foreground">
-                                {chapter.lessons} lessons
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Reviews */}
             <Card>
@@ -444,7 +540,7 @@ export default function CourseDetailPage() {
                   </h2>
                   <div className="flex items-center gap-1">
                     <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-                    <span className="text-lg font-semibold">{course.rating}</span>
+                    <span className="text-lg font-semibold">{course.rating.toFixed(1)}</span>
                     <span className="text-muted-foreground">
                       ({course.ratingCount} reviews)
                     </span>
@@ -452,7 +548,7 @@ export default function CourseDetailPage() {
                 </div>
 
                 {/* Rating Distribution */}
-                <div className="mb-6 space-y-2">
+                <div className="space-y-2">
                   {[5, 4, 3, 2, 1].map((stars) => (
                     <div key={stars} className="flex items-center gap-3">
                       <span className="w-8 text-sm text-muted-foreground">
@@ -465,37 +561,6 @@ export default function CourseDetailPage() {
                       <span className="w-10 text-right text-sm text-muted-foreground">
                         {stars === 5 ? '70%' : stars === 4 ? '20%' : '10%'}
                       </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Review List */}
-                <div className="space-y-4">
-                  {course.reviews.map((review) => (
-                    <div key={review.id} className="border-t border-border pt-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium text-foreground">{review.user}</p>
-                          <div className="mt-1 flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating
-                                    ? 'fill-amber-400 text-amber-400'
-                                    : 'text-muted-foreground'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {review.date}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {review.comment}
-                      </p>
                     </div>
                   ))}
                 </div>

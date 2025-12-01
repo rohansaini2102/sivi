@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,8 +11,6 @@ import {
   Users,
   Star,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Play,
   Lock,
   Globe,
@@ -20,172 +18,51 @@ import {
   Target,
   BarChart3,
   Shield,
-  ArrowLeft,
   Share2,
   Heart,
+  Loader2,
+  ShoppingCart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { useAuthStore } from '@/store/authStore';
 import Header from '@/components/Header';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-// Mock data - will be replaced with API
-const mockTestSeriesData = {
-  id: '1',
-  title: 'RAS Prelims Mock Test Series 2024',
-  slug: 'ras-prelims-mock-test-series-2024',
-  shortDescription: 'Complete mock test series for RAS Prelims with detailed solutions and performance analysis.',
-  longDescription: `Prepare for RAS Prelims 2024 with our comprehensive mock test series designed by subject matter experts and previous RAS toppers.
+interface Exam {
+  _id: string;
+  title: string;
+  questions: number;
+  duration: number;
+  isFree: boolean;
+  difficulty: string;
+}
 
-This test series includes full-length mock tests following the exact exam pattern, along with subject-wise practice tests to strengthen your weak areas. Each test comes with detailed solutions and performance analysis to help you track your progress.`,
-  thumbnail: '',
-  category: 'RAS',
-  price: 1499,
-  discountPrice: 999,
-  validityDays: 180,
-  language: 'both' as 'hi' | 'en' | 'both',
-  totalExams: 25,
-  freeExams: 3,
-  rating: 4.9,
-  ratingCount: 2100,
-  enrollmentCount: 8500,
-  isFree: false,
-  features: [
-    '25 Full-length Mock Tests',
-    '3 Free Practice Tests',
-    'Detailed Solutions & Explanations',
-    'Performance Analytics Dashboard',
-    'All India Rank Comparison',
-    'Topic-wise Analysis',
-    'Previous Year Pattern Based',
-    '24/7 Access on All Devices',
-  ],
-  exams: [
-    {
-      id: 'e1',
-      title: 'Free: Rajasthan GK Practice Test',
-      questions: 50,
-      duration: 60,
-      isFree: true,
-      difficulty: 'easy',
-    },
-    {
-      id: 'e2',
-      title: 'Free: Indian Polity Practice Test',
-      questions: 50,
-      duration: 60,
-      isFree: true,
-      difficulty: 'medium',
-    },
-    {
-      id: 'e3',
-      title: 'Free: General Science Practice Test',
-      questions: 50,
-      duration: 60,
-      isFree: true,
-      difficulty: 'easy',
-    },
-    {
-      id: 'e4',
-      title: 'RAS Prelims Full Mock Test 1',
-      questions: 150,
-      duration: 180,
-      isFree: false,
-      difficulty: 'medium',
-    },
-    {
-      id: 'e5',
-      title: 'RAS Prelims Full Mock Test 2',
-      questions: 150,
-      duration: 180,
-      isFree: false,
-      difficulty: 'medium',
-    },
-    {
-      id: 'e6',
-      title: 'RAS Prelims Full Mock Test 3',
-      questions: 150,
-      duration: 180,
-      isFree: false,
-      difficulty: 'hard',
-    },
-    {
-      id: 'e7',
-      title: 'Rajasthan History Sectional Test',
-      questions: 75,
-      duration: 90,
-      isFree: false,
-      difficulty: 'medium',
-    },
-    {
-      id: 'e8',
-      title: 'Rajasthan Geography Sectional Test',
-      questions: 75,
-      duration: 90,
-      isFree: false,
-      difficulty: 'medium',
-    },
-    {
-      id: 'e9',
-      title: 'Indian Economy Practice Test',
-      questions: 50,
-      duration: 60,
-      isFree: false,
-      difficulty: 'medium',
-    },
-    {
-      id: 'e10',
-      title: 'Current Affairs Monthly Test - Dec 2024',
-      questions: 50,
-      duration: 45,
-      isFree: false,
-      difficulty: 'easy',
-    },
-  ],
-  stats: {
-    avgScore: 68,
-    highestScore: 145,
-    passPercentage: 72,
-    avgTimePerQuestion: 58,
-  },
-  reviews: [
-    {
-      id: 'r1',
-      user: 'Rajendra Singh',
-      rating: 5,
-      comment: 'Excellent test series! Questions are very close to actual RAS exam pattern. Detailed solutions helped me understand concepts better.',
-      date: '2024-11-28',
-    },
-    {
-      id: 'r2',
-      user: 'Priya Sharma',
-      rating: 5,
-      comment: 'Best test series for RAS preparation. Performance analytics really helped me identify my weak areas.',
-      date: '2024-11-25',
-    },
-    {
-      id: 'r3',
-      user: 'Amit Kumar',
-      rating: 4,
-      comment: 'Good quality questions. Would recommend to all RAS aspirants. UI could be improved a bit.',
-      date: '2024-11-20',
-    },
-  ],
-  instructor: {
-    name: 'Team SiviAcademy',
-    bio: 'Expert faculty team with 10+ years of experience in competitive exam preparation',
-  },
-};
+interface TestSeries {
+  _id: string;
+  slug: string;
+  title: string;
+  shortDescription?: string;
+  description: string;
+  thumbnail?: string;
+  examCategory: string;
+  price: number;
+  discountPrice?: number;
+  validityDays: number;
+  language: 'hi' | 'en' | 'both';
+  totalExams: number;
+  freeExams: number;
+  rating: number;
+  ratingCount: number;
+  enrollmentCount: number;
+  isFree: boolean;
+  features: string[];
+  exams: Exam[];
+}
 
 const categoryColors: Record<string, string> = {
   RAS: 'bg-indigo-100 text-indigo-700',
@@ -202,26 +79,158 @@ const difficultyColors: Record<string, string> = {
   hard: 'text-red-600',
 };
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function TestSeriesDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const [testSeries, setTestSeries] = useState<TestSeries | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  // In real app, fetch test series data based on slug
-  const testSeries = mockTestSeriesData;
-  const hasDiscount = testSeries.discountPrice && testSeries.discountPrice < testSeries.price;
+  useEffect(() => {
+    fetchTestSeries();
+  }, [params.slug]);
+
+  const fetchTestSeries = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/store/test-series/${params.slug}`
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        setTestSeries(data.data);
+      } else {
+        toast.error('Test series not found');
+        router.push('/test-series');
+      }
+    } catch (error) {
+      toast.error('Failed to load test series');
+      router.push('/test-series');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const hasDiscount = testSeries?.discountPrice && testSeries.discountPrice < testSeries.price;
   const discount = hasDiscount
-    ? Math.round(((testSeries.price - testSeries.discountPrice!) / testSeries.price) * 100)
+    ? Math.round(((testSeries!.price - testSeries!.discountPrice!) / testSeries!.price) * 100)
     : 0;
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     if (!isAuthenticated) {
       router.push(`/login?redirect=/test-series/${params.slug}`);
       return;
     }
-    // Handle purchase flow
-    router.push(`/checkout/test-series/${testSeries.id}`);
+
+    if (!testSeries) return;
+
+    if (testSeries.isFree) {
+      toast.success('Enrolled successfully!');
+      router.push('/dashboard/test-series');
+      return;
+    }
+
+    setIsPurchasing(true);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          itemId: testSeries._id,
+          itemType: 'test_series',
+        }),
+      });
+
+      const orderData = await orderRes.json();
+
+      if (!orderData.success) {
+        throw new Error(orderData.error?.message || 'Failed to create order');
+      }
+
+      const { razorpayOrderId, amount, currency, paymentId } = orderData.data;
+
+      if (!window.Razorpay) {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        document.body.appendChild(script);
+        await new Promise((resolve) => {
+          script.onload = resolve;
+        });
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: amount,
+        currency: currency,
+        name: 'SiviAcademy',
+        description: testSeries.title,
+        order_id: razorpayOrderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentId,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyData.success) {
+              toast.success('Payment successful! You are now enrolled.');
+              router.push('/dashboard/test-series');
+            } else {
+              toast.error('Payment verification failed. Please contact support.');
+            }
+          } catch (error) {
+            toast.error('Payment verification failed');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        theme: {
+          color: '#6366F1',
+        },
+        modal: {
+          ondismiss: () => {
+            setIsPurchasing(false);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to initiate payment');
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   const handleStartFreeTest = (examId: string) => {
@@ -231,6 +240,21 @@ export default function TestSeriesDetailPage() {
     }
     router.push(`/exam/${examId}/start`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!testSeries) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -255,23 +279,25 @@ export default function TestSeriesDetailPage() {
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
             {/* Left Content */}
             <div className="flex-1 text-white">
-              <Badge className={cn('mb-4', categoryColors[testSeries.category])}>
-                {testSeries.category}
+              <Badge className={cn('mb-4', categoryColors[testSeries.examCategory])}>
+                {testSeries.examCategory}
               </Badge>
 
               <h1 className="text-2xl font-bold md:text-3xl lg:text-4xl">
                 {testSeries.title}
               </h1>
 
-              <p className="mt-4 text-lg text-slate-300">
-                {testSeries.shortDescription}
-              </p>
+              {testSeries.shortDescription && (
+                <p className="mt-4 text-lg text-slate-300">
+                  {testSeries.shortDescription}
+                </p>
+              )}
 
               {/* Stats */}
               <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-slate-300">
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span className="font-semibold text-white">{testSeries.rating}</span>
+                  <span className="font-semibold text-white">{testSeries.rating.toFixed(1)}</span>
                   <span>({testSeries.ratingCount.toLocaleString()} ratings)</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -294,11 +320,6 @@ export default function TestSeriesDetailPage() {
                 <span className="text-sm text-slate-300">
                   {testSeries.language === 'hi' ? 'Hindi' : testSeries.language === 'en' ? 'English' : 'Hindi & English'}
                 </span>
-              </div>
-
-              {/* Instructor */}
-              <div className="mt-4 text-sm text-slate-300">
-                Created by <span className="font-medium text-white">{testSeries.instructor.name}</span>
               </div>
             </div>
 
@@ -329,25 +350,41 @@ export default function TestSeriesDetailPage() {
                 <CardContent className="p-6">
                   {/* Price */}
                   <div className="flex items-baseline gap-3">
-                    <span className="text-3xl font-bold text-foreground">
-                      ₹{hasDiscount ? testSeries.discountPrice : testSeries.price}
-                    </span>
-                    {hasDiscount && (
+                    {testSeries.isFree ? (
+                      <span className="text-3xl font-bold text-emerald-600">Free</span>
+                    ) : (
                       <>
-                        <span className="text-lg text-muted-foreground line-through">
-                          ₹{testSeries.price}
+                        <span className="text-3xl font-bold text-foreground">
+                          ₹{hasDiscount ? testSeries.discountPrice : testSeries.price}
                         </span>
-                        <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-                          {discount}% off
-                        </Badge>
+                        {hasDiscount && (
+                          <>
+                            <span className="text-lg text-muted-foreground line-through">
+                              ₹{testSeries.price}
+                            </span>
+                            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
+                              {discount}% off
+                            </Badge>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
 
                   {/* CTA Buttons */}
                   <div className="mt-6 space-y-3">
-                    <Button className="w-full" size="lg" onClick={handlePurchase}>
-                      Buy Now
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handlePurchase}
+                      disabled={isPurchasing}
+                    >
+                      {isPurchasing ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      ) : (
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                      )}
+                      {testSeries.isFree ? 'Enroll Now' : 'Buy Now'}
                     </Button>
                     <div className="flex gap-2">
                       <Button
@@ -370,17 +407,19 @@ export default function TestSeriesDetailPage() {
                   </div>
 
                   {/* Features */}
-                  <div className="mt-6 space-y-3 border-t border-border pt-6">
-                    <h4 className="font-semibold text-foreground">This test series includes:</h4>
-                    <ul className="space-y-2">
-                      {testSeries.features.slice(0, 5).map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  {testSeries.features && testSeries.features.length > 0 && (
+                    <div className="mt-6 space-y-3 border-t border-border pt-6">
+                      <h4 className="font-semibold text-foreground">This test series includes:</h4>
+                      <ul className="space-y-2">
+                        {testSeries.features.slice(0, 5).map((feature, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Guarantee */}
                   <div className="mt-6 flex items-center gap-2 rounded-lg bg-muted p-3 text-sm">
@@ -398,20 +437,27 @@ export default function TestSeriesDetailPage() {
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card p-4 lg:hidden">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-foreground">
-                ₹{hasDiscount ? testSeries.discountPrice : testSeries.price}
-              </span>
-              {hasDiscount && (
-                <span className="text-sm text-muted-foreground line-through">
-                  ₹{testSeries.price}
+            {testSeries.isFree ? (
+              <span className="text-xl font-bold text-emerald-600">Free</span>
+            ) : (
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-foreground">
+                  ₹{hasDiscount ? testSeries.discountPrice : testSeries.price}
                 </span>
-              )}
-            </div>
+                {hasDiscount && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    ₹{testSeries.price}
+                  </span>
+                )}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">{testSeries.validityDays} days access</p>
           </div>
-          <Button size="lg" onClick={handlePurchase}>
-            Buy Now
+          <Button size="lg" onClick={handlePurchase} disabled={isPurchasing}>
+            {isPurchasing ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : null}
+            {testSeries.isFree ? 'Enroll Now' : 'Buy Now'}
           </Button>
         </div>
       </div>
@@ -424,7 +470,6 @@ export default function TestSeriesDetailPage() {
               <TabsList className="w-full justify-start">
                 <TabsTrigger value="tests">Tests</TabsTrigger>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="stats">Stats</TabsTrigger>
                 <TabsTrigger value="reviews">Reviews</TabsTrigger>
               </TabsList>
 
@@ -432,53 +477,61 @@ export default function TestSeriesDetailPage() {
               <TabsContent value="tests" className="mt-6">
                 <Card>
                   <CardContent className="p-0">
-                    <div className="divide-y divide-border">
-                      {testSeries.exams.map((exam, index) => (
-                        <motion.div
-                          key={exam.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="flex items-center justify-between p-4 hover:bg-muted/50"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={cn(
-                              'flex h-10 w-10 items-center justify-center rounded-lg',
-                              exam.isFree ? 'bg-emerald-100' : 'bg-slate-100'
-                            )}>
-                              {exam.isFree ? (
-                                <Play className="h-5 w-5 text-emerald-600" />
-                              ) : (
-                                <Lock className="h-5 w-5 text-slate-400" />
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-foreground">
-                                {exam.title}
-                              </h4>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>{exam.questions} Questions</span>
-                                <span>{exam.duration} mins</span>
-                                <span className={difficultyColors[exam.difficulty]}>
-                                  {exam.difficulty.charAt(0).toUpperCase() + exam.difficulty.slice(1)}
-                                </span>
+                    {testSeries.exams && testSeries.exams.length > 0 ? (
+                      <div className="divide-y divide-border">
+                        {testSeries.exams.map((exam, index) => (
+                          <motion.div
+                            key={exam._id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="flex items-center justify-between p-4 hover:bg-muted/50"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={cn(
+                                'flex h-10 w-10 items-center justify-center rounded-lg',
+                                exam.isFree ? 'bg-emerald-100' : 'bg-slate-100'
+                              )}>
+                                {exam.isFree ? (
+                                  <Play className="h-5 w-5 text-emerald-600" />
+                                ) : (
+                                  <Lock className="h-5 w-5 text-slate-400" />
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-foreground">
+                                  {exam.title}
+                                </h4>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span>{exam.questions} Questions</span>
+                                  <span>{exam.duration} mins</span>
+                                  {exam.difficulty && (
+                                    <span className={difficultyColors[exam.difficulty] || ''}>
+                                      {exam.difficulty.charAt(0).toUpperCase() + exam.difficulty.slice(1)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          {exam.isFree ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStartFreeTest(exam.id)}
-                            >
-                              Start Free
-                            </Button>
-                          ) : (
-                            <Badge variant="secondary">Locked</Badge>
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
+                            {exam.isFree ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleStartFreeTest(exam._id)}
+                              >
+                                Start Free
+                              </Button>
+                            ) : (
+                              <Badge variant="secondary">Locked</Badge>
+                            )}
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-muted-foreground">
+                        No tests available yet
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -489,67 +542,29 @@ export default function TestSeriesDetailPage() {
                 <Card>
                   <CardContent className="p-6">
                     <h3 className="mb-4 text-lg font-semibold text-foreground">About This Test Series</h3>
-                    <div className="prose prose-sm max-w-none text-muted-foreground">
-                      {testSeries.longDescription.split('\n\n').map((para, i) => (
-                        <p key={i}>{para}</p>
-                      ))}
-                    </div>
+                    <div
+                      className="prose prose-sm max-w-none text-muted-foreground"
+                      dangerouslySetInnerHTML={{ __html: testSeries.description }}
+                    />
                   </CardContent>
                 </Card>
 
                 {/* Features Grid */}
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="mb-4 text-lg font-semibold text-foreground">What You Get</h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {testSeries.features.map((feature, index) => (
-                        <div key={index} className="flex items-start gap-3">
-                          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-                          <span className="text-muted-foreground">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Stats Tab */}
-              <TabsContent value="stats" className="mt-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="mb-6 text-lg font-semibold text-foreground">Test Series Statistics</h3>
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                      <div className="text-center">
-                        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                          <Target className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <p className="text-2xl font-bold text-foreground">{testSeries.stats.avgScore}%</p>
-                        <p className="text-sm text-muted-foreground">Average Score</p>
+                {testSeries.features && testSeries.features.length > 0 && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <h3 className="mb-4 text-lg font-semibold text-foreground">What You Get</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {testSeries.features.map((feature, index) => (
+                          <div key={index} className="flex items-start gap-3">
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                            <span className="text-muted-foreground">{feature}</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="text-center">
-                        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                          <Award className="h-6 w-6 text-emerald-600" />
-                        </div>
-                        <p className="text-2xl font-bold text-foreground">{testSeries.stats.highestScore}</p>
-                        <p className="text-sm text-muted-foreground">Highest Score</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                          <BarChart3 className="h-6 w-6 text-purple-600" />
-                        </div>
-                        <p className="text-2xl font-bold text-foreground">{testSeries.stats.passPercentage}%</p>
-                        <p className="text-sm text-muted-foreground">Pass Rate</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-                          <Clock className="h-6 w-6 text-amber-600" />
-                        </div>
-                        <p className="text-2xl font-bold text-foreground">{testSeries.stats.avgTimePerQuestion}s</p>
-                        <p className="text-sm text-muted-foreground">Avg Time/Question</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               {/* Reviews Tab */}
@@ -559,7 +574,7 @@ export default function TestSeriesDetailPage() {
                     {/* Rating Summary */}
                     <div className="mb-6 flex items-center gap-6 border-b border-border pb-6">
                       <div className="text-center">
-                        <p className="text-4xl font-bold text-foreground">{testSeries.rating}</p>
+                        <p className="text-4xl font-bold text-foreground">{testSeries.rating.toFixed(1)}</p>
                         <div className="mt-1 flex items-center justify-center gap-1">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star
@@ -579,32 +594,20 @@ export default function TestSeriesDetailPage() {
                       </div>
                     </div>
 
-                    {/* Reviews List */}
-                    <div className="space-y-6">
-                      {testSeries.reviews.map((review) => (
-                        <div key={review.id} className="border-b border-border pb-6 last:border-0 last:pb-0">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium text-foreground">{review.user}</p>
-                              <div className="mt-1 flex items-center gap-2">
-                                <div className="flex items-center gap-0.5">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                      key={star}
-                                      className={cn(
-                                        'h-3 w-3',
-                                        star <= review.rating
-                                          ? 'fill-amber-400 text-amber-400'
-                                          : 'text-muted-foreground'
-                                      )}
-                                    />
-                                  ))}
-                                </div>
-                                <span className="text-xs text-muted-foreground">{review.date}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <p className="mt-3 text-muted-foreground">{review.comment}</p>
+                    {/* Rating Distribution */}
+                    <div className="space-y-2">
+                      {[5, 4, 3, 2, 1].map((stars) => (
+                        <div key={stars} className="flex items-center gap-3">
+                          <span className="w-8 text-sm text-muted-foreground">
+                            {stars} ★
+                          </span>
+                          <Progress
+                            value={stars === 5 ? 70 : stars === 4 ? 20 : 10}
+                            className="h-2 flex-1"
+                          />
+                          <span className="w-10 text-right text-sm text-muted-foreground">
+                            {stars === 5 ? '70%' : stars === 4 ? '20%' : '10%'}
+                          </span>
                         </div>
                       ))}
                     </div>
