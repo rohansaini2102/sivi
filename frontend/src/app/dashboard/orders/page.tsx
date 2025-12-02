@@ -98,7 +98,7 @@ export default function OrdersPage() {
   // Fetch payment history
   useEffect(() => {
     const fetchPaymentHistory = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
         setLoading(false);
         return;

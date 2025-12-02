@@ -66,7 +66,7 @@ export default function MyCoursesPage() {
   // Fetch enrolled courses
   useEffect(() => {
     const fetchEnrollments = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
         setLoading(false);
         return;
