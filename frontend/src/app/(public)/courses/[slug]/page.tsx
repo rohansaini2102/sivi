@@ -173,7 +173,16 @@ export default function CourseDetailPage() {
         throw new Error(orderData.error?.message || 'Failed to create order');
       }
 
-      const { razorpayOrderId, amount, currency, paymentId } = orderData.data;
+      const { razorpayOrderId, amount, currency, orderId } = orderData.data;
+
+      // Validate Razorpay key
+      const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      if (!razorpayKeyId) {
+        console.error('Razorpay key is not configured');
+        toast.error('Payment system is not configured. Please contact support.');
+        setIsPurchasing(false);
+        return;
+      }
 
       // Load Razorpay script if not loaded
       if (!window.Razorpay) {
@@ -188,7 +197,7 @@ export default function CourseDetailPage() {
 
       // Open Razorpay checkout
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: razorpayKeyId,
         amount: amount,
         currency: currency,
         name: 'SiviAcademy',
@@ -204,7 +213,7 @@ export default function CourseDetailPage() {
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({
-                orderId: paymentId,
+                orderId: orderId,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
@@ -214,13 +223,20 @@ export default function CourseDetailPage() {
             const verifyData = await verifyRes.json();
 
             if (verifyData.success) {
-              toast.success('Payment successful! You are now enrolled.');
-              router.push('/dashboard/courses');
+              toast.success('Payment successful! Redirecting to your courses...');
+              // Wait briefly for backend to sync
+              setTimeout(() => {
+                router.push('/dashboard/courses');
+              }, 1000);
             } else {
-              toast.error('Payment verification failed. Please contact support.');
+              // Show specific error message from backend
+              const errorMessage = verifyData.error?.message || verifyData.message || 'Payment verification failed';
+              toast.error(errorMessage);
+              console.error('Payment verification error:', verifyData);
             }
           } catch (error) {
-            toast.error('Payment verification failed');
+            console.error('Payment verification exception:', error);
+            toast.error('Unable to verify payment. Please contact support with your order ID.');
           }
         },
         prefill: {

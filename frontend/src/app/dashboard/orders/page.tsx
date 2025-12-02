@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -38,105 +38,23 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Mock orders data
-const mockOrders = [
-  {
-    id: 'ORD-2024-001',
-    date: '2024-11-30',
-    items: [
-      {
-        type: 'course',
-        title: 'RAS Complete Course 2024',
-        category: 'RAS',
-        price: 1999,
-        validityDays: 365,
-      },
-    ],
-    total: 1999,
-    status: 'completed',
-    paymentMethod: 'UPI',
-    transactionId: 'TXN123456789',
-    invoiceUrl: '#',
-  },
-  {
-    id: 'ORD-2024-002',
-    date: '2024-11-25',
-    items: [
-      {
-        type: 'test-series',
-        title: 'RAS Prelims Mock Test Series 2024',
-        category: 'RAS',
-        price: 999,
-        validityDays: 180,
-      },
-    ],
-    total: 999,
-    status: 'completed',
-    paymentMethod: 'Credit Card',
-    transactionId: 'TXN987654321',
-    invoiceUrl: '#',
-  },
-  {
-    id: 'ORD-2024-003',
-    date: '2024-11-20',
-    items: [
-      {
-        type: 'course',
-        title: 'REET Level 1 & 2 Complete',
-        category: 'REET',
-        price: 999,
-        validityDays: 180,
-      },
-      {
-        type: 'test-series',
-        title: 'REET Level 1 Practice Tests',
-        category: 'REET',
-        price: 599,
-        validityDays: 120,
-      },
-    ],
-    total: 1598,
-    status: 'completed',
-    paymentMethod: 'Net Banking',
-    transactionId: 'TXN456789123',
-    invoiceUrl: '#',
-  },
-  {
-    id: 'ORD-2024-004',
-    date: '2024-11-15',
-    items: [
-      {
-        type: 'test-series',
-        title: 'Rajasthan Patwar Test Series',
-        category: 'PATWAR',
-        price: 399,
-        validityDays: 90,
-      },
-    ],
-    total: 399,
-    status: 'refunded',
-    paymentMethod: 'UPI',
-    transactionId: 'TXN789123456',
-    refundReason: 'Customer requested refund within 7 days',
-  },
-  {
-    id: 'ORD-2024-005',
-    date: '2024-11-10',
-    items: [
-      {
-        type: 'course',
-        title: 'Rajasthan GK Complete Course',
-        category: 'OTHER',
-        price: 699,
-        validityDays: 180,
-      },
-    ],
-    total: 699,
-    status: 'failed',
-    paymentMethod: 'Credit Card',
-    failureReason: 'Payment declined by bank',
-  },
-];
+// Define types for payment history
+interface PaymentItem {
+  course?: { _id: string; title: string; category: string };
+  testSeries?: { _id: string; title: string; category: string };
+  itemType: 'course' | 'test_series';
+}
+
+interface PaymentHistory {
+  orderId: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  razorpayPaymentId?: string;
+  course?: { _id: string; title: string; category: string };
+  testSeries?: { _id: string; title: string; category: string };
+  itemType: 'course' | 'test_series';
+}
 
 const categoryColors: Record<string, string> = {
   RAS: 'bg-indigo-100 text-indigo-700',
@@ -173,11 +91,50 @@ const statusConfig: Record<string, { label: string; icon: any; color: string }> 
 export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedOrder, setSelectedOrder] = useState<typeof mockOrders[0] | null>(null);
+  const [orders, setOrders] = useState<PaymentHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<PaymentHistory | null>(null);
+
+  // Fetch payment history
+  useEffect(() => {
+    const fetchPaymentHistory = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/payment/history`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          setOrders(data.data.payments || []);
+        } else {
+          console.error('Failed to fetch payment history:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching payment history:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPaymentHistory();
+  }, []);
 
   // Filter orders
-  const filteredOrders = mockOrders.filter((order) => {
-    if (searchQuery && !order.id.toLowerCase().includes(searchQuery.toLowerCase())) {
+  const filteredOrders = orders.filter((order) => {
+    if (searchQuery && !order.orderId.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     if (statusFilter !== 'all' && order.status !== statusFilter) {
@@ -187,10 +144,10 @@ export default function OrdersPage() {
   });
 
   // Stats
-  const totalSpent = mockOrders
+  const totalSpent = orders
     .filter((o) => o.status === 'completed')
-    .reduce((sum, o) => sum + o.total, 0);
-  const totalOrders = mockOrders.filter((o) => o.status === 'completed').length;
+    .reduce((sum, o) => sum + o.amount, 0);
+  const totalOrders = orders.filter((o) => o.status === 'completed').length;
 
   return (
     <div className="space-y-6">
@@ -217,7 +174,7 @@ export default function OrdersPage() {
         <Card className="col-span-2 sm:col-span-1">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-emerald-600">
-              {mockOrders.filter((o) => o.status === 'completed').length}
+              {totalOrders}
             </p>
             <p className="text-sm text-muted-foreground">Successful</p>
           </CardContent>
@@ -251,7 +208,14 @@ export default function OrdersPage() {
       </div>
 
       {/* Orders List */}
-      {filteredOrders.length === 0 ? (
+      {loading ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading orders...</p>
+          </CardContent>
+        </Card>
+      ) : filteredOrders.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
@@ -269,12 +233,19 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-4">
           {filteredOrders.map((order, index) => {
-            const status = statusConfig[order.status];
+            const status = statusConfig[order.status] || statusConfig.pending;
             const StatusIcon = status.icon;
+            const itemTitle = order.course?.title || order.testSeries?.title || 'Unknown Item';
+            const itemCategory = order.course?.category || order.testSeries?.category || 'OTHER';
+            const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            });
 
             return (
               <motion.div
-                key={order.id}
+                key={order.orderId}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -288,10 +259,10 @@ export default function OrdersPage() {
                           <Package className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="font-semibold text-foreground">{order.id}</p>
+                          <p className="font-semibold text-foreground">{order.orderId}</p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-3.5 w-3.5" />
-                            <span>{order.date}</span>
+                            <span>{orderDate}</span>
                           </div>
                         </div>
                       </div>
@@ -320,76 +291,59 @@ export default function OrdersPage() {
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                   <div>
                                     <p className="text-muted-foreground">Order ID</p>
-                                    <p className="font-medium">{selectedOrder.id}</p>
+                                    <p className="font-medium">{selectedOrder.orderId}</p>
                                   </div>
                                   <div>
                                     <p className="text-muted-foreground">Date</p>
-                                    <p className="font-medium">{selectedOrder.date}</p>
+                                    <p className="font-medium">
+                                      {new Date(selectedOrder.createdAt).toLocaleDateString('en-IN')}
+                                    </p>
                                   </div>
                                   <div>
-                                    <p className="text-muted-foreground">Payment Method</p>
-                                    <p className="font-medium">{selectedOrder.paymentMethod}</p>
+                                    <p className="text-muted-foreground">Status</p>
+                                    <p className="font-medium capitalize">{selectedOrder.status}</p>
                                   </div>
                                   <div>
-                                    <p className="text-muted-foreground">Transaction ID</p>
+                                    <p className="text-muted-foreground">Payment ID</p>
                                     <p className="font-medium font-mono text-xs">
-                                      {selectedOrder.transactionId || 'N/A'}
+                                      {selectedOrder.razorpayPaymentId || 'N/A'}
                                     </p>
                                   </div>
                                 </div>
 
                                 <div className="border-t border-border pt-4">
-                                  <p className="mb-2 font-medium">Items</p>
-                                  <div className="space-y-2">
-                                    {selectedOrder.items.map((item, i) => (
-                                      <div
-                                        key={i}
-                                        className="flex items-center justify-between rounded-lg bg-muted p-3"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          {item.type === 'course' ? (
-                                            <BookOpen className="h-5 w-5 text-primary" />
-                                          ) : (
-                                            <FileText className="h-5 w-5 text-emerald-600" />
-                                          )}
-                                          <div>
-                                            <p className="font-medium">{item.title}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                              {item.validityDays} days validity
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <p className="font-medium">₹{item.price}</p>
+                                  <p className="mb-2 font-medium">Item</p>
+                                  <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+                                    <div className="flex items-center gap-3">
+                                      {selectedOrder.course ? (
+                                        <BookOpen className="h-5 w-5 text-primary" />
+                                      ) : (
+                                        <FileText className="h-5 w-5 text-emerald-600" />
+                                      )}
+                                      <div>
+                                        <p className="font-medium">
+                                          {selectedOrder.course?.title || selectedOrder.testSeries?.title}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {selectedOrder.itemType === 'course' ? 'Course' : 'Test Series'}
+                                        </p>
                                       </div>
-                                    ))}
+                                    </div>
+                                    <p className="font-medium">₹{selectedOrder.amount}</p>
                                   </div>
                                 </div>
 
                                 <div className="flex items-center justify-between border-t border-border pt-4">
                                   <p className="font-semibold">Total</p>
-                                  <p className="text-xl font-bold">₹{selectedOrder.total}</p>
+                                  <p className="text-xl font-bold">₹{selectedOrder.amount}</p>
                                 </div>
 
-                                {selectedOrder.status === 'completed' &&
-                                  selectedOrder.invoiceUrl && (
-                                    <Button className="w-full" variant="outline">
-                                      <Download className="mr-2 h-4 w-4" />
-                                      Download Invoice
-                                    </Button>
-                                  )}
-
-                                {selectedOrder.status === 'failed' && (
-                                  <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                                    <p className="font-medium">Failure Reason:</p>
-                                    <p>{selectedOrder.failureReason}</p>
-                                  </div>
-                                )}
-
-                                {selectedOrder.status === 'refunded' && (
-                                  <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                                    <p className="font-medium">Refund Reason:</p>
-                                    <p>{selectedOrder.refundReason}</p>
-                                  </div>
+                                {selectedOrder.status === 'completed' && (
+                                  <Button className="w-full" variant="outline" asChild>
+                                    <Link href={selectedOrder.course ? `/dashboard/courses` : `/dashboard/test-series`}>
+                                      View {selectedOrder.course ? 'Course' : 'Test Series'}
+                                    </Link>
+                                  </Button>
                                 )}
                               </div>
                             )}
@@ -400,46 +354,42 @@ export default function OrdersPage() {
 
                     {/* Order Items */}
                     <div className="p-4">
-                      <div className="space-y-3">
-                        {order.items.map((item, i) => (
-                          <div key={i} className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                                  item.type === 'course' ? 'bg-primary/10' : 'bg-emerald-100'
-                                }`}
-                              >
-                                {item.type === 'course' ? (
-                                  <BookOpen className="h-5 w-5 text-primary" />
-                                ) : (
-                                  <FileText className="h-5 w-5 text-emerald-600" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium text-foreground">{item.title}</p>
-                                <div className="flex items-center gap-2">
-                                  <Badge
-                                    variant="secondary"
-                                    className={categoryColors[item.category]}
-                                  >
-                                    {item.category}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {item.validityDays} days
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <p className="font-medium text-foreground">₹{item.price}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                              order.course ? 'bg-primary/10' : 'bg-emerald-100'
+                            }`}
+                          >
+                            {order.course ? (
+                              <BookOpen className="h-5 w-5 text-primary" />
+                            ) : (
+                              <FileText className="h-5 w-5 text-emerald-600" />
+                            )}
                           </div>
-                        ))}
+                          <div>
+                            <p className="font-medium text-foreground">{itemTitle}</p>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="secondary"
+                                className={categoryColors[itemCategory] || categoryColors.OTHER}
+                              >
+                                {itemCategory}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {order.itemType === 'course' ? 'Course' : 'Test Series'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="font-medium text-foreground">₹{order.amount}</p>
                       </div>
 
                       {/* Order Total */}
                       <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
                         <span className="text-muted-foreground">Total</span>
                         <span className="text-lg font-bold text-foreground">
-                          ₹{order.total}
+                          ₹{order.amount}
                         </span>
                       </div>
                     </div>

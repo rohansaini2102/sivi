@@ -185,4 +185,58 @@ export const storeApi = {
     api.get('/store/search', { params: { q: query } }),
 };
 
+// Payment API
+export const paymentApi = {
+  // Get payment history with pagination
+  getPaymentHistory: (page: number = 1, limit: number = 20) =>
+    api.get('/payment/history', { params: { page, limit } }),
+
+  // Create payment order
+  createOrder: (itemType: 'course' | 'test_series', itemId: string, couponCode?: string) =>
+    api.post('/payment/create-order', { itemType, itemId, couponCode }),
+
+  // Verify payment
+  verifyPayment: (data: {
+    orderId: string;
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => api.post('/payment/verify', data),
+};
+
+// Learn API (Enrollment & Progress)
+export const learnApi = {
+  // Get user's enrollments
+  getEnrollments: (itemType?: 'course' | 'test_series') => {
+    const params = itemType ? { itemType } : {};
+    return api.get('/learn/enrollments', { params });
+  },
+
+  // Check if user is enrolled in specific item
+  checkEnrollment: (itemType: 'course' | 'test_series', itemId: string) =>
+    api.get('/learn/check-enrollment', {
+      params: { itemType, itemId },
+    }),
+
+  // Get course content (for enrolled users)
+  getCourseContent: (courseId: string) =>
+    api.get(`/learn/courses/${courseId}`),
+
+  // Get test series content (for enrolled users)
+  getTestSeriesContent: (testSeriesId: string) =>
+    api.get(`/learn/test-series/${testSeriesId}`),
+
+  // Mark lesson as completed
+  markLessonComplete: (enrollmentId: string, lessonId: string) =>
+    api.post(`/learn/enrollments/${enrollmentId}/lessons/${lessonId}/complete`),
+
+  // Submit exam attempt
+  submitExamAttempt: (examId: string, answers: Record<string, string>) =>
+    api.post(`/learn/exams/${examId}/submit`, { answers }),
+
+  // Get exam results
+  getExamResults: (attemptId: string) =>
+    api.get(`/learn/exam-attempts/${attemptId}`),
+};
+
 export default api;

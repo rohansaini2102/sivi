@@ -305,27 +305,50 @@ export const verifyPayment = async (req: Request, res: Response) => {
     payment.status = 'completed';
     await payment.save();
 
-    // Update enrollment count
-    if (payment.course) {
-      await Course.findByIdAndUpdate(payment.course, { $inc: { enrollmentCount: 1 } });
-    } else if (payment.testSeries) {
-      await TestSeries.findByIdAndUpdate(payment.testSeries, { $inc: { enrollmentCount: 1 } });
-    }
-
-    // Create enrollment
-    const enrollment = new Enrollment({
+    // Check for existing enrollment
+    const existingEnrollment = await Enrollment.findOne({
       user: userId,
-      itemType: payment.itemType,
-      course: payment.course,
-      testSeries: payment.testSeries,
-      payment: payment._id,
-      price: payment.amount,
-      validFrom: new Date(),
-      validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
-      isActive: true,
+      [payment.itemType === 'course' ? 'course' : 'testSeries']:
+        payment.itemType === 'course' ? payment.course : payment.testSeries,
     });
 
-    await enrollment.save();
+    let enrollment;
+
+    if (existingEnrollment) {
+      // Update existing enrollment (extend validity)
+      existingEnrollment.validUntil = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000);
+      existingEnrollment.isActive = true;
+      existingEnrollment.payment = payment._id; // Link to latest payment
+      await existingEnrollment.save();
+
+      enrollment = existingEnrollment;
+
+      logger.info(`Existing enrollment extended for user ${userId}: ${orderId}`);
+    } else {
+      // Update enrollment count only for new enrollments
+      if (payment.course) {
+        await Course.findByIdAndUpdate(payment.course, { $inc: { enrollmentCount: 1 } });
+      } else if (payment.testSeries) {
+        await TestSeries.findByIdAndUpdate(payment.testSeries, { $inc: { enrollmentCount: 1 } });
+      }
+
+      // Create new enrollment
+      enrollment = new Enrollment({
+        user: userId,
+        itemType: payment.itemType,
+        course: payment.course,
+        testSeries: payment.testSeries,
+        payment: payment._id,
+        price: payment.amount,
+        validFrom: new Date(),
+        validUntil: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000),
+        isActive: true,
+      });
+
+      await enrollment.save();
+
+      logger.info(`New enrollment created for user ${userId}: ${orderId}`);
+    }
 
     logger.info(`Payment verified and enrollment created: ${orderId}`);
 

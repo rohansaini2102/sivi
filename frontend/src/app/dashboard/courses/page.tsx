@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -27,8 +27,24 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CourseCard } from '@/components/cards';
 
-// Enrolled courses will come from real API - removed dummy data
-const enrolledCourses: any[] = [];
+// Define types for enrollment data
+interface EnrollmentCourse {
+  _id: string;
+  title: string;
+  category: string;
+  thumbnail?: string;
+}
+
+interface CourseEnrollment {
+  _id: string;
+  course: EnrollmentCourse;
+  progress: {
+    completedLessons: string[];
+    percentage: number;
+  };
+  validUntil: string;
+  isActive: boolean;
+}
 
 const categoryColors: Record<string, string> = {
   RAS: 'bg-indigo-100 text-indigo-700',
@@ -44,11 +60,62 @@ export default function MyCoursesPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [enrolledCourses, setEnrolledCourses] = useState<CourseEnrollment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // No enrolled courses yet - empty arrays
-  const filteredCourses = enrolledCourses;
-  const inProgress = 0;
-  const completed = 0;
+  // Fetch enrolled courses
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/learn/enrollments?itemType=course`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          setEnrolledCourses(data.data.enrollments || []);
+        } else {
+          console.error('Failed to fetch enrollments:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching enrollments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEnrollments();
+  }, []);
+
+  // Filter and calculate stats
+  const filteredCourses = enrolledCourses.filter((enrollment) => {
+    if (searchQuery && !enrollment.course.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    if (filterStatus === 'in-progress' && enrollment.progress.percentage >= 100) {
+      return false;
+    }
+    if (filterStatus === 'completed' && enrollment.progress.percentage < 100) {
+      return false;
+    }
+    return true;
+  });
+
+  const inProgress = enrolledCourses.filter((e) => e.progress.percentage > 0 && e.progress.percentage < 100).length;
+  const completed = enrolledCourses.filter((e) => e.progress.percentage >= 100).length;
 
   return (
     <div className="space-y-6">
@@ -151,7 +218,14 @@ export default function MyCoursesPage() {
       </div>
 
       {/* Courses */}
-      {filteredCourses.length === 0 ? (
+      {loading ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading courses...</p>
+          </CardContent>
+        </Card>
+      ) : filteredCourses.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground/50" />

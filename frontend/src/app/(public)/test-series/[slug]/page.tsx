@@ -221,6 +221,15 @@ export default function TestSeriesDetailPage() {
 
       const { razorpayOrderId, amount, currency, orderId } = orderData.data;
 
+      // Validate Razorpay key
+      const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      if (!razorpayKeyId) {
+        console.error('Razorpay key is not configured');
+        toast.error('Payment system is not configured. Please contact support.');
+        setIsPurchasing(false);
+        return;
+      }
+
       if (!window.Razorpay) {
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -232,7 +241,7 @@ export default function TestSeriesDetailPage() {
       }
 
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: razorpayKeyId,
         amount: amount,
         currency: currency,
         name: 'SiviAcademy',
@@ -257,13 +266,20 @@ export default function TestSeriesDetailPage() {
             const verifyData = await verifyRes.json();
 
             if (verifyData.success) {
-              toast.success('Payment successful! You are now enrolled.');
-              router.push('/dashboard/test-series');
+              toast.success('Payment successful! Redirecting to your test series...');
+              // Wait briefly for backend to sync
+              setTimeout(() => {
+                router.push('/dashboard/test-series');
+              }, 1000);
             } else {
-              toast.error('Payment verification failed. Please contact support.');
+              // Show specific error message from backend
+              const errorMessage = verifyData.error?.message || verifyData.message || 'Payment verification failed';
+              toast.error(errorMessage);
+              console.error('Payment verification error:', verifyData);
             }
           } catch (error) {
-            toast.error('Payment verification failed');
+            console.error('Payment verification exception:', error);
+            toast.error('Unable to verify payment. Please contact support with your order ID.');
           }
         },
         prefill: {
