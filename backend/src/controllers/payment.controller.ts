@@ -6,6 +6,7 @@ import Enrollment from '../models/Enrollment';
 import {
   createRazorpayOrder,
   verifyPaymentSignature,
+  verifyPaymentWithRazorpay,
   generateOrderId,
 } from '../services/payment.service';
 import { createOrderSchema, verifyPaymentSchema } from '../validators/payment.validator';
@@ -143,7 +144,7 @@ export const createOrder = async (req: Request, res: Response) => {
         amount: razorpayOrder.amount, // In paise
         currency: razorpayOrder.currency,
         itemName,
-        keyId: process.env.RAZORPAY_KEY_ID,
+        // keyId removed - frontend should use NEXT_PUBLIC_RAZORPAY_KEY_ID from env
       },
     });
   } catch (error: any) {
@@ -190,6 +191,17 @@ export const verifyPayment = async (req: Request, res: Response) => {
       });
     }
 
+    // Check if razorpayPaymentId already used (prevent replay attacks)
+    const existingPayment = await Payment.findOne({ razorpayPaymentId });
+    if (existingPayment && existingPayment._id.toString() !== payment._id.toString()) {
+      logger.error(`Razorpay payment ID ${razorpayPaymentId} already used for order ${existingPayment.orderId}`);
+
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Payment ID already used', code: 'DUPLICATE_PAYMENT_ID' },
+      });
+    }
+
     // Verify signature
     const isValid = verifyPaymentSignature({
       razorpayOrderId,
@@ -207,28 +219,82 @@ export const verifyPayment = async (req: Request, res: Response) => {
       });
     }
 
+    // Verify with Razorpay API (additional security layer)
+    const razorpayVerified = await verifyPaymentWithRazorpay(razorpayPaymentId, payment.amount);
+
+    if (!razorpayVerified) {
+      payment.status = 'failed';
+      await payment.save();
+
+      logger.error(`Razorpay API verification failed for payment ${razorpayPaymentId}`);
+
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Payment verification failed with gateway', code: 'GATEWAY_VERIFICATION_FAILED' },
+      });
+    }
+
+    // Verify payment amount matches expected price (security check)
+    let expectedAmount = 0;
+    let validityDays = 365;
+
+    if (payment.course) {
+      const course = await Course.findById(payment.course);
+      if (!course) {
+        payment.status = 'failed';
+        await payment.save();
+
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Course not found', code: 'COURSE_NOT_FOUND' },
+        });
+      }
+      expectedAmount = course.discountPrice || course.price;
+      validityDays = course.validityDays;
+    } else if (payment.testSeries) {
+      const testSeries = await TestSeries.findById(payment.testSeries);
+      if (!testSeries) {
+        payment.status = 'failed';
+        await payment.save();
+
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Test series not found', code: 'TEST_SERIES_NOT_FOUND' },
+        });
+      }
+      expectedAmount = testSeries.discountPrice || testSeries.price;
+      validityDays = testSeries.validityDays;
+    }
+
+    // Verify amount matches (accounting for potential rounding)
+    if (Math.abs(payment.amount - expectedAmount) > 0.01) {
+      payment.status = 'failed';
+      await payment.save();
+
+      logger.error(`Payment amount mismatch: expected ${expectedAmount}, got ${payment.amount} for order ${orderId}`);
+
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Payment amount verification failed',
+          code: 'AMOUNT_MISMATCH',
+        },
+      });
+    }
+
+    logger.info(`Payment amount verified: ${payment.amount} INR for order ${orderId}`);
+
     // Update payment status
     payment.razorpayPaymentId = razorpayPaymentId;
     payment.razorpaySignature = razorpaySignature;
     payment.status = 'completed';
     await payment.save();
 
-    // Get item for validity days
-    let validityDays = 365;
+    // Update enrollment count
     if (payment.course) {
-      const course = await Course.findById(payment.course);
-      if (course) {
-        validityDays = course.validityDays;
-        // Update enrollment count
-        await Course.findByIdAndUpdate(payment.course, { $inc: { enrollmentCount: 1 } });
-      }
+      await Course.findByIdAndUpdate(payment.course, { $inc: { enrollmentCount: 1 } });
     } else if (payment.testSeries) {
-      const testSeries = await TestSeries.findById(payment.testSeries);
-      if (testSeries) {
-        validityDays = testSeries.validityDays;
-        // Update enrollment count
-        await TestSeries.findByIdAndUpdate(payment.testSeries, { $inc: { enrollmentCount: 1 } });
-      }
+      await TestSeries.findByIdAndUpdate(payment.testSeries, { $inc: { enrollmentCount: 1 } });
     }
 
     // Create enrollment

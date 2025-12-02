@@ -185,7 +185,6 @@ export default function MyCoursesPage() {
         <div className="space-y-4">
           {filteredCourses.map((course, index) => {
             const progress = Math.round((course.completedLessons / course.totalLessons) * 100);
-            const status = getStatus(course);
             return (
               <motion.div
                 key={course.id}

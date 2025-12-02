@@ -112,6 +112,36 @@ export const getPaymentDetails = async (paymentId: string): Promise<any> => {
   }
 };
 
+// Verify payment with Razorpay API (security check)
+export const verifyPaymentWithRazorpay = async (
+  razorpayPaymentId: string,
+  expectedAmount: number
+): Promise<boolean> => {
+  try {
+    // Fetch payment details from Razorpay
+    const payment = await getRazorpay().payments.fetch(razorpayPaymentId);
+
+    // Verify payment status is captured
+    if (payment.status !== 'captured') {
+      logger.error(`Payment ${razorpayPaymentId} not captured. Status: ${payment.status}`);
+      return false;
+    }
+
+    // Verify amount (Razorpay amounts are in paise, so divide by 100)
+    const razorpayAmount = payment.amount / 100; // Convert paise to rupees
+    if (Math.abs(razorpayAmount - expectedAmount) > 0.01) {
+      logger.error(`Payment ${razorpayPaymentId} amount mismatch: expected ${expectedAmount}, got ${razorpayAmount}`);
+      return false;
+    }
+
+    logger.info(`Payment verified via Razorpay API: ${razorpayPaymentId} - ${razorpayAmount} INR`);
+    return true;
+  } catch (error: any) {
+    logger.error('Error verifying payment with Razorpay API:', error);
+    return false;
+  }
+};
+
 // Initiate refund
 export const initiateRefund = async (
   paymentId: string,
@@ -144,6 +174,7 @@ export const generateOrderId = (): string => {
 export default {
   createRazorpayOrder,
   verifyPaymentSignature,
+  verifyPaymentWithRazorpay,
   getPaymentDetails,
   initiateRefund,
   generateOrderId,

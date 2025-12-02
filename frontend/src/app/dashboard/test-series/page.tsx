@@ -166,7 +166,7 @@ export default function MyTestSeriesPage() {
     .sort((a, b) => {
       switch (sortBy) {
         case 'recent':
-          return new Date(b.lastAttempted).getTime() - new Date(a.lastAttempted).getTime();
+          return new Date(b.lastAttempted || 0).getTime() - new Date(a.lastAttempted || 0).getTime();
         case 'progress':
           const progressA = a.examsAttempted / a.totalExams;
           const progressB = b.examsAttempted / b.totalExams;
