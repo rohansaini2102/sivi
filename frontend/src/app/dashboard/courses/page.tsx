@@ -246,7 +246,7 @@ export default function MyCoursesPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredCourses.map((course, index) => (
             <motion.div
-              key={course.id}
+              key={course._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
@@ -261,7 +261,7 @@ export default function MyCoursesPage() {
             const progress = Math.round((course.completedLessons / course.totalLessons) * 100);
             return (
               <motion.div
-                key={course.id}
+                key={course._id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
