@@ -1,5 +1,6 @@
-import dotenv from 'dotenv';
-dotenv.config();
+// CRITICAL: Load environment variables FIRST, before any other imports
+// This must be the very first import to ensure env vars are loaded
+import './env';
 
 import app from './app';
 import connectDB from './config/database';

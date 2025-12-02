@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Plus,
   BookOpen,
@@ -73,6 +73,7 @@ interface Pagination {
 
 export default function AdminContentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('courses');
   const [courses, setCourses] = useState<Course[]>([]);
   const [testSeries, setTestSeries] = useState<TestSeries[]>([]);
@@ -163,6 +164,21 @@ export default function AdminContentPage() {
       fetchTestSeries();
     }
   }, [activeTab, fetchCourses, fetchTestSeries]);
+
+  // Handle refresh query parameter
+  useEffect(() => {
+    const shouldRefresh = searchParams.get('refresh');
+    if (shouldRefresh === 'true') {
+      // Refresh the current tab's data
+      if (activeTab === 'courses') {
+        fetchCourses();
+      } else {
+        fetchTestSeries();
+      }
+      // Clear the query parameter
+      router.replace('/admin/content', { scroll: false });
+    }
+  }, [searchParams, activeTab, fetchCourses, fetchTestSeries, router]);
 
   const handleTogglePublish = async (type: 'course' | 'testSeries', id: string) => {
     try {

@@ -3,14 +3,28 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
 
+// Validate R2 configuration
+if (!process.env.R2_ENDPOINT || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
+  logger.error('R2 configuration missing:', {
+    hasEndpoint: !!process.env.R2_ENDPOINT,
+    hasAccessKey: !!process.env.R2_ACCESS_KEY_ID,
+    hasSecretKey: !!process.env.R2_SECRET_ACCESS_KEY,
+  });
+  throw new Error('R2 storage not properly configured');
+}
+
+logger.info(`R2 configured with endpoint: ${process.env.R2_ENDPOINT}`);
+logger.info(`R2 Access Key ID length: ${process.env.R2_ACCESS_KEY_ID.length}`);
+
 // Initialize S3 Client for Cloudflare R2
 const s3Client = new S3Client({
-  region: 'auto',
+  region: 'us-east-1', // Use a valid region instead of 'auto' for R2 compatibility
   endpoint: process.env.R2_ENDPOINT,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
   },
+  forcePathStyle: true, // Required for R2 compatibility
 });
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'sivi';

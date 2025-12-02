@@ -47,6 +47,7 @@ export const createTestSeriesSchema = z.object({
   isFree: z.boolean().default(false),
   isPublished: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
+  thumbnailUrl: z.string().url().optional().or(z.literal('')),
 });
 
 // Update test series schema (all fields optional)

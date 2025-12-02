@@ -89,6 +89,13 @@ export default function CourseDetailPage() {
   }, [params.slug]);
 
   const fetchCourse = async () => {
+    // Validate slug parameter before making API call
+    if (!params?.slug || typeof params.slug !== 'string') {
+      toast.error('Invalid course');
+      router.push('/courses');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await fetch(
@@ -98,9 +105,10 @@ export default function CourseDetailPage() {
 
       if (data.success) {
         setCourse(data.data);
-        if (data.data.subjects?.length > 0) {
-          setExpandedSubjects([data.data.subjects[0]._id]);
-        }
+        // Subjects/chapters will be added later - not needed for initial launch
+        // if (data.data.subjects?.length > 0) {
+        //   setExpandedSubjects([data.data.subjects[0]._id]);
+        // }
       } else {
         toast.error('Course not found');
         router.push('/courses');
@@ -196,10 +204,10 @@ export default function CourseDetailPage() {
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                paymentId,
+                orderId: paymentId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
               }),
             });
 
@@ -473,63 +481,8 @@ export default function CourseDetailPage() {
             </Card>
 
             {/* Curriculum */}
-            {course.subjects && course.subjects.length > 0 && (
-              <Card>
-                <CardContent className="p-5">
-                  <h2 className="mb-4 text-xl font-semibold text-foreground">
-                    Course Curriculum
-                  </h2>
-                  <div className="space-y-3">
-                    {course.subjects.map((subject) => (
-                      <div
-                        key={subject._id}
-                        className="rounded-lg border border-border overflow-hidden"
-                      >
-                        <button
-                          className="flex w-full items-center justify-between bg-muted/50 p-4 text-left transition-colors hover:bg-muted"
-                          onClick={() => toggleSubject(subject._id)}
-                        >
-                          <div>
-                            <h3 className="font-medium text-foreground">
-                              {subject.title}
-                            </h3>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {subject.chapters?.length || 0} chapters
-                            </p>
-                          </div>
-                          {expandedSubjects.includes(subject._id) ? (
-                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </button>
-
-                        {expandedSubjects.includes(subject._id) && subject.chapters && (
-                          <div className="divide-y divide-border">
-                            {subject.chapters.map((chapter) => (
-                              <div
-                                key={chapter._id}
-                                className="flex items-center justify-between p-4"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Lock className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm text-foreground">
-                                    {chapter.title}
-                                  </span>
-                                </div>
-                                <span className="text-sm text-muted-foreground">
-                                  {chapter.lessons} lessons
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Curriculum section removed - will be added after content is built */}
+            {/* Course content (subjects, chapters, lessons) will be created later by admin */}
 
             {/* Reviews */}
             <Card>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -12,6 +12,7 @@ import {
   Clock,
   Target,
   Award,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,61 +28,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { TestSeriesCard } from '@/components/cards';
 
-// Mock enrolled test series data
-const mockEnrolledTestSeries = [
-  {
-    id: '1',
-    title: 'RAS Prelims Mock Test Series 2024',
-    shortDescription: 'Complete mock test series for RAS Prelims.',
-    thumbnail: '',
-    category: 'RAS',
-    price: 999,
-    validityDays: 180,
-    daysLeft: 150,
-    language: 'both' as const,
-    totalExams: 25,
-    examsAttempted: 8,
-    avgScore: 72,
-    bestScore: 85,
-    lastAttempted: '2024-11-30',
-    isEnrolled: true,
-  },
-  {
-    id: '2',
-    title: 'REET Level 1 Practice Tests',
-    shortDescription: 'Practice tests for REET Level 1.',
-    thumbnail: '',
-    category: 'REET',
-    price: 599,
-    validityDays: 120,
-    daysLeft: 80,
-    language: 'hi' as const,
-    totalExams: 20,
-    examsAttempted: 15,
-    avgScore: 68,
-    bestScore: 78,
-    lastAttempted: '2024-11-28',
-    isEnrolled: true,
-  },
-  {
-    id: '3',
-    title: 'Rajasthan Patwar Test Series',
-    shortDescription: 'Tests for Patwar examination.',
-    thumbnail: '',
-    category: 'PATWAR',
-    price: 399,
-    validityDays: 90,
-    daysLeft: 45,
-    language: 'hi' as const,
-    totalExams: 15,
-    examsAttempted: 15,
-    avgScore: 82,
-    bestScore: 92,
-    lastAttempted: '2024-11-25',
-    isEnrolled: true,
-  },
-];
-
 const categoryColors: Record<string, string> = {
   RAS: 'bg-indigo-100 text-indigo-700',
   REET: 'bg-emerald-100 text-emerald-700',
@@ -91,14 +37,115 @@ const categoryColors: Record<string, string> = {
   OTHER: 'bg-gray-100 text-gray-700',
 };
 
+type EnrollmentData = {
+  id: string;
+  title: string;
+  shortDescription?: string;
+  thumbnail: string;
+  category: string;
+  price: number;
+  validityDays: number;
+  daysLeft: number;
+  language: 'hi' | 'en' | 'both';
+  totalExams: number;
+  examsAttempted: number;
+  avgScore: number;
+  bestScore: number;
+  lastAttempted?: string;
+  isEnrolled: boolean;
+  slug: string;
+};
+
 export default function MyTestSeriesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [enrollments, setEnrollments] = useState<EnrollmentData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch enrollments on mount
+  useEffect(() => {
+    fetchEnrollments();
+  }, []);
+
+  const fetchEnrollments = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        // Not logged in - show empty state instead of error
+        setEnrollments([]);
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/learn/enrollments?itemType=test_series`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch enrollments');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch enrollments');
+      }
+
+      // Transform enrollment data to match our format
+      const transformedData: EnrollmentData[] = data.data.enrollments.map((enrollment: any) => {
+        const testSeries = enrollment.testSeries;
+        const validUntil = new Date(enrollment.validUntil);
+        const today = new Date();
+        const daysLeft = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Calculate progress from enrollment data
+        const examsAttempted = enrollment.progress?.completedExams?.length || 0;
+        // Scores will be calculated from exam attempts data when available
+        const avgScore = 0;
+        const bestScore = 0;
+
+        return {
+          id: testSeries._id,
+          title: testSeries.title,
+          shortDescription: testSeries.shortDescription,
+          thumbnail: testSeries.thumbnail || '',
+          category: testSeries.examCategory,
+          price: testSeries.price || 0,
+          validityDays: testSeries.validityDays,
+          daysLeft: Math.max(0, daysLeft),
+          language: 'both' as const,
+          totalExams: testSeries.totalExams || 0,
+          examsAttempted,
+          avgScore,
+          bestScore,
+          lastAttempted: enrollment.createdAt,
+          isEnrolled: true,
+          slug: testSeries.slug,
+        };
+      });
+
+      setEnrollments(transformedData);
+    } catch (err) {
+      console.error('Error fetching enrollments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load test series');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculate test series status
-  const getStatus = (series: typeof mockEnrolledTestSeries[0]) => {
+  const getStatus = (series: EnrollmentData) => {
     const progress = Math.round((series.examsAttempted / series.totalExams) * 100);
     if (progress === 100) return 'completed';
     if (progress > 0) return 'in-progress';
@@ -106,7 +153,7 @@ export default function MyTestSeriesPage() {
   };
 
   // Filter and sort test series
-  const filteredTestSeries = mockEnrolledTestSeries
+  const filteredTestSeries = enrollments
     .filter((series) => {
       if (searchQuery && !series.title.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
@@ -134,11 +181,44 @@ export default function MyTestSeriesPage() {
     });
 
   // Stats
-  const totalAttempted = mockEnrolledTestSeries.reduce((sum, s) => sum + s.examsAttempted, 0);
-  const totalTests = mockEnrolledTestSeries.reduce((sum, s) => sum + s.totalExams, 0);
-  const avgScore = mockEnrolledTestSeries.length > 0
-    ? Math.round(mockEnrolledTestSeries.reduce((sum, s) => sum + s.avgScore, 0) / mockEnrolledTestSeries.length)
+  const totalAttempted = enrollments.reduce((sum, s) => sum + s.examsAttempted, 0);
+  const totalTests = enrollments.reduce((sum, s) => sum + s.totalExams, 0);
+  const avgScore = enrollments.length > 0
+    ? Math.round(enrollments.reduce((sum, s) => sum + s.avgScore, 0) / enrollments.length)
     : 0;
+  const bestScore = enrollments.length > 0
+    ? Math.max(...enrollments.map((s) => s.bestScore))
+    : 0;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading your test series...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <FileText className="mx-auto h-12 w-12 text-destructive" />
+            <h3 className="mt-4 text-lg font-semibold">Error Loading Test Series</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+            <Button className="mt-4" onClick={fetchEnrollments}>
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -147,7 +227,7 @@ export default function MyTestSeriesPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">My Test Series</h1>
           <p className="text-muted-foreground">
-            {mockEnrolledTestSeries.length} test series enrolled
+            {enrollments.length} test series enrolled
           </p>
         </div>
         <Button asChild>
@@ -162,7 +242,7 @@ export default function MyTestSeriesPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-foreground">{mockEnrolledTestSeries.length}</p>
+            <p className="text-2xl font-bold text-foreground">{enrollments.length}</p>
             <p className="text-sm text-muted-foreground">Test Series</p>
           </CardContent>
         </Card>
@@ -180,9 +260,7 @@ export default function MyTestSeriesPage() {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-amber-600">
-              {Math.max(...mockEnrolledTestSeries.map((s) => s.bestScore))}%
-            </p>
+            <p className="text-2xl font-bold text-amber-600">{bestScore}%</p>
             <p className="text-sm text-muted-foreground">Best Score</p>
           </CardContent>
         </Card>

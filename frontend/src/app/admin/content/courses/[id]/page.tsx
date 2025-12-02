@@ -46,6 +46,7 @@ interface CourseFormData {
   features: string[];
   isFree: boolean;
   isFeatured: boolean;
+  isPublished: boolean;
 }
 
 export default function CourseFormPage() {
@@ -70,6 +71,7 @@ export default function CourseFormPage() {
     features: [''],
     isFree: false,
     isFeatured: false,
+    isPublished: false,
   });
   const [slug, setSlug] = useState('');
 
@@ -107,6 +109,7 @@ export default function CourseFormPage() {
           features: course.features?.length > 0 ? course.features : [''],
           isFree: course.isFree,
           isFeatured: course.isFeatured,
+          isPublished: course.isPublished,
         });
         setSlug(course.slug);
       } else {
@@ -135,45 +138,41 @@ export default function CourseFormPage() {
       // Clean up features array
       const cleanedFeatures = formData.features.filter((f) => f.trim() !== '');
 
-      // Prepare form data for multipart/form-data (for thumbnail)
-      const submitData = new FormData();
-      submitData.append('title', formData.title);
-      submitData.append('description', formData.description);
-      submitData.append('shortDescription', formData.shortDescription);
-      submitData.append('examCategory', formData.examCategory);
-      submitData.append('price', String(formData.price));
-      if (formData.discountPrice !== undefined) {
-        submitData.append('discountPrice', String(formData.discountPrice));
-      }
-      submitData.append('validityDays', String(formData.validityDays));
-      submitData.append('language', formData.language);
-      submitData.append('level', formData.level);
-      submitData.append('features', JSON.stringify(cleanedFeatures));
-      submitData.append('isFree', String(formData.isFree));
-      submitData.append('isFeatured', String(formData.isFeatured));
+      // Prepare data object
+      const dataToSend = {
+        title: formData.title,
+        description: formData.description,
+        shortDescription: formData.shortDescription,
+        examCategory: formData.examCategory,
+        price: formData.price,
+        discountPrice: formData.discountPrice,
+        validityDays: formData.validityDays,
+        language: formData.language,
+        level: formData.level,
+        features: cleanedFeatures,
+        isFree: formData.isFree,
+        isFeatured: formData.isFeatured,
+        isPublished: formData.isPublished,
+        thumbnailUrl: formData.thumbnail, // Pre-uploaded URL
+      };
 
-      // For thumbnail, we're using the URL directly (already uploaded via ImageUpload)
-      if (formData.thumbnail) {
-        submitData.append('thumbnailUrl', formData.thumbnail);
-      }
+      // Create FormData and add data as JSON string
+      const submitData = new FormData();
+      submitData.append('data', JSON.stringify(dataToSend));
 
       const res = await fetch(endpoint, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          // NO Content-Type header - browser sets multipart boundary
         },
-        body: JSON.stringify({
-          ...formData,
-          features: cleanedFeatures,
-          thumbnailUrl: formData.thumbnail,
-        }),
+        body: submitData, // Send FormData, not JSON
       });
       const data = await res.json();
 
       if (data.success) {
         toast.success(isNew ? 'Course created successfully' : 'Course updated successfully');
-        router.push('/admin/content');
+        router.push('/admin/content?refresh=true');
       } else {
         toast.error(data.error?.message || 'Failed to save course');
       }
@@ -510,6 +509,20 @@ export default function CourseFormPage() {
                   id="isFeatured"
                   checked={formData.isFeatured}
                   onCheckedChange={(checked) => setFormData({ ...formData, isFeatured: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="isPublished" className="text-slate-300">Published</Label>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Unpublished courses won't appear in the store
+                  </p>
+                </div>
+                <Switch
+                  id="isPublished"
+                  checked={formData.isPublished}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
                 />
               </div>
             </CardContent>

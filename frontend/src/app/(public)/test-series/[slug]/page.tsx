@@ -93,30 +93,87 @@ export default function TestSeriesDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [enrollmentStatus, setEnrollmentStatus] = useState<{
+    isEnrolled: boolean;
+    enrollment: any | null;
+  } | null>(null);
+  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
 
   useEffect(() => {
     fetchTestSeries();
   }, [params.slug]);
 
+  useEffect(() => {
+    if (testSeries && isAuthenticated) {
+      checkEnrollment();
+    }
+  }, [testSeries, isAuthenticated]);
+
   const fetchTestSeries = async () => {
+    // Validate slug parameter before making API call
+    if (!params?.slug || typeof params.slug !== 'string') {
+      toast.error('Invalid test series');
+      router.push('/test-series');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/store/test-series/${params.slug}`
-      );
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/store/test-series/${params.slug}`;
+      console.log('Fetching test series from:', url);
+
+      const res = await fetch(url);
+      console.log('Response status:', res.status);
+
       const data = await res.json();
+      console.log('Response data:', data);
 
       if (data.success) {
         setTestSeries(data.data);
       } else {
-        toast.error('Test series not found');
+        console.error('Test series fetch failed:', data);
+        toast.error(data.error?.message || 'Test series not found');
         router.push('/test-series');
       }
     } catch (error) {
+      console.error('Test series fetch error:', error);
       toast.error('Failed to load test series');
       router.push('/test-series');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkEnrollment = async () => {
+    if (!testSeries) return;
+
+    setCheckingEnrollment(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setEnrollmentStatus({ isEnrolled: false, enrollment: null });
+        return;
+      }
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/learn/check-enrollment?itemId=${testSeries._id}&itemType=test_series`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setEnrollmentStatus(data.data);
+      }
+    } catch (error) {
+      console.error('Error checking enrollment:', error);
+      setEnrollmentStatus({ isEnrolled: false, enrollment: null });
+    } finally {
+      setCheckingEnrollment(false);
     }
   };
 
@@ -162,7 +219,7 @@ export default function TestSeriesDetailPage() {
         throw new Error(orderData.error?.message || 'Failed to create order');
       }
 
-      const { razorpayOrderId, amount, currency, paymentId } = orderData.data;
+      const { razorpayOrderId, amount, currency, orderId } = orderData.data;
 
       if (!window.Razorpay) {
         const script = document.createElement('script');
@@ -190,10 +247,10 @@ export default function TestSeriesDetailPage() {
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                paymentId,
+                orderId: orderId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
               }),
             });
 
@@ -373,19 +430,34 @@ export default function TestSeriesDetailPage() {
 
                   {/* CTA Buttons */}
                   <div className="mt-6 space-y-3">
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={handlePurchase}
-                      disabled={isPurchasing}
-                    >
-                      {isPurchasing ? (
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      ) : (
-                        <ShoppingCart className="mr-2 h-5 w-5" />
-                      )}
-                      {testSeries.isFree ? 'Enroll Now' : 'Buy Now'}
-                    </Button>
+                    {enrollmentStatus?.isEnrolled ? (
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={() => router.push('/dashboard/test-series')}
+                      >
+                        <CheckCircle2 className="mr-2 h-5 w-5" />
+                        Go to Dashboard
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={handlePurchase}
+                        disabled={isPurchasing || checkingEnrollment}
+                      >
+                        {isPurchasing || checkingEnrollment ? (
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        ) : (
+                          <ShoppingCart className="mr-2 h-5 w-5" />
+                        )}
+                        {checkingEnrollment
+                          ? 'Checking...'
+                          : testSeries.isFree
+                          ? 'Enroll Now'
+                          : 'Buy Now'}
+                      </Button>
+                    )}
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -453,12 +525,23 @@ export default function TestSeriesDetailPage() {
             )}
             <p className="text-xs text-muted-foreground">{testSeries.validityDays} days access</p>
           </div>
-          <Button size="lg" onClick={handlePurchase} disabled={isPurchasing}>
-            {isPurchasing ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : null}
-            {testSeries.isFree ? 'Enroll Now' : 'Buy Now'}
-          </Button>
+          {enrollmentStatus?.isEnrolled ? (
+            <Button size="lg" onClick={() => router.push('/dashboard/test-series')}>
+              <CheckCircle2 className="mr-2 h-5 w-5" />
+              Dashboard
+            </Button>
+          ) : (
+            <Button size="lg" onClick={handlePurchase} disabled={isPurchasing || checkingEnrollment}>
+              {isPurchasing || checkingEnrollment ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : null}
+              {checkingEnrollment
+                ? 'Checking...'
+                : testSeries.isFree
+                ? 'Enroll Now'
+                : 'Buy Now'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -476,62 +559,9 @@ export default function TestSeriesDetailPage() {
               {/* Tests Tab */}
               <TabsContent value="tests" className="mt-6">
                 <Card>
-                  <CardContent className="p-0">
-                    {testSeries.exams && testSeries.exams.length > 0 ? (
-                      <div className="divide-y divide-border">
-                        {testSeries.exams.map((exam, index) => (
-                          <motion.div
-                            key={exam._id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="flex items-center justify-between p-4 hover:bg-muted/50"
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className={cn(
-                                'flex h-10 w-10 items-center justify-center rounded-lg',
-                                exam.isFree ? 'bg-emerald-100' : 'bg-slate-100'
-                              )}>
-                                {exam.isFree ? (
-                                  <Play className="h-5 w-5 text-emerald-600" />
-                                ) : (
-                                  <Lock className="h-5 w-5 text-slate-400" />
-                                )}
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-foreground">
-                                  {exam.title}
-                                </h4>
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                  <span>{exam.questions} Questions</span>
-                                  <span>{exam.duration} mins</span>
-                                  {exam.difficulty && (
-                                    <span className={difficultyColors[exam.difficulty] || ''}>
-                                      {exam.difficulty.charAt(0).toUpperCase() + exam.difficulty.slice(1)}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            {exam.isFree ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleStartFreeTest(exam._id)}
-                              >
-                                Start Free
-                              </Button>
-                            ) : (
-                              <Badge variant="secondary">Locked</Badge>
-                            )}
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center text-muted-foreground">
-                        No tests available yet
-                      </div>
-                    )}
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    {/* Exam list removed - exams will be created later by admin */}
+                    Tests will be available after purchase. Admin will create the exam content.
                   </CardContent>
                 </Card>
               </TabsContent>

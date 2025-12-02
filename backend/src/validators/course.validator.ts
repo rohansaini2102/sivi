@@ -44,6 +44,7 @@ export const createCourseSchema = z.object({
   isFree: z.boolean().default(false),
   isPublished: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
+  thumbnailUrl: z.string().url().optional().or(z.literal('')),
 });
 
 // Update course schema (all fields optional)

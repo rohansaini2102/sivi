@@ -104,16 +104,36 @@ export const getCourseById = async (req: Request, res: Response) => {
 export const createCourse = async (req: Request, res: Response) => {
   try {
     // Parse and validate body
-    const validatedData = createCourseSchema.parse(JSON.parse(req.body.data || '{}'));
+    let parsedData;
+    try {
+      parsedData = JSON.parse(req.body.data || '{}');
+      logger.info('Parsed course data:', {
+        keys: Object.keys(parsedData),
+        hasTitle: !!parsedData.title
+      });
+    } catch (error) {
+      logger.error('Failed to parse req.body.data:', error);
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Invalid data format', code: 'INVALID_JSON' },
+      });
+    }
+
+    const validatedData = createCourseSchema.parse(parsedData);
 
     // Generate unique slug
     const slug = await generateUniqueSlug(validatedData.title, Course);
 
-    // Handle thumbnail upload
+    // Handle thumbnail - check file upload OR pre-uploaded URL
     let thumbnailUrl = '';
     if (req.file) {
+      // New file uploaded in this request
       const { url } = await uploadThumbnail(req.file);
       thumbnailUrl = url;
+    } else if (parsedData.thumbnailUrl) {
+      // Pre-uploaded URL from ImageUpload component
+      thumbnailUrl = parsedData.thumbnailUrl;
+      logger.info('Using pre-uploaded thumbnail:', thumbnailUrl);
     }
 
     // Create course
@@ -170,7 +190,18 @@ export const updateCourse = async (req: Request, res: Response) => {
     }
 
     // Parse and validate body
-    const validatedData = updateCourseSchema.parse(JSON.parse(req.body.data || '{}'));
+    let parsedData;
+    try {
+      parsedData = JSON.parse(req.body.data || '{}');
+    } catch (error) {
+      logger.error('Failed to parse req.body.data:', error);
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Invalid data format', code: 'INVALID_JSON' },
+      });
+    }
+
+    const validatedData = updateCourseSchema.parse(parsedData);
 
     // Generate new slug if title changed
     let slug = existingCourse.slug;
@@ -181,13 +212,17 @@ export const updateCourse = async (req: Request, res: Response) => {
     // Handle thumbnail upload
     let thumbnailUrl = existingCourse.thumbnail;
     if (req.file) {
-      // Delete old thumbnail
+      // Delete old thumbnail if exists
       if (existingCourse.thumbnail) {
         await deleteFromR2(existingCourse.thumbnail);
       }
       // Upload new thumbnail
       const { url } = await uploadThumbnail(req.file);
       thumbnailUrl = url;
+    } else if (parsedData.thumbnailUrl && parsedData.thumbnailUrl !== existingCourse.thumbnail) {
+      // Updated to pre-uploaded URL
+      thumbnailUrl = parsedData.thumbnailUrl;
+      logger.info('Updating to pre-uploaded thumbnail:', thumbnailUrl);
     }
 
     // Update course
@@ -209,7 +244,12 @@ export const updateCourse = async (req: Request, res: Response) => {
       message: 'Course updated successfully',
     });
   } catch (error: any) {
-    logger.error('Update course error:', error);
+    logger.error('Update course error:', {
+      error: error.message,
+      hasReqFile: !!req.file,
+      hasReqBodyData: !!req.body.data,
+      bodyKeys: Object.keys(req.body),
+    });
 
     if (error.errors) {
       return res.status(400).json({

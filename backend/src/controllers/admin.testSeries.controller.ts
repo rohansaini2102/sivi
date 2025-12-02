@@ -104,16 +104,36 @@ export const getTestSeriesById = async (req: Request, res: Response) => {
 export const createTestSeries = async (req: Request, res: Response) => {
   try {
     // Parse and validate body
-    const validatedData = createTestSeriesSchema.parse(JSON.parse(req.body.data || '{}'));
+    let parsedData;
+    try {
+      parsedData = JSON.parse(req.body.data || '{}');
+      logger.info('Parsed test series data:', {
+        keys: Object.keys(parsedData),
+        hasTitle: !!parsedData.title
+      });
+    } catch (error) {
+      logger.error('Failed to parse req.body.data:', error);
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Invalid data format', code: 'INVALID_JSON' },
+      });
+    }
+
+    const validatedData = createTestSeriesSchema.parse(parsedData);
 
     // Generate unique slug
     const slug = await generateUniqueSlug(validatedData.title, TestSeries);
 
-    // Handle thumbnail upload
+    // Handle thumbnail - check file upload OR pre-uploaded URL
     let thumbnailUrl = '';
     if (req.file) {
+      // New file uploaded in this request
       const { url } = await uploadThumbnail(req.file);
       thumbnailUrl = url;
+    } else if (parsedData.thumbnailUrl) {
+      // Pre-uploaded URL from ImageUpload component
+      thumbnailUrl = parsedData.thumbnailUrl;
+      logger.info('Using pre-uploaded thumbnail:', thumbnailUrl);
     }
 
     // Create test series
@@ -170,7 +190,18 @@ export const updateTestSeries = async (req: Request, res: Response) => {
     }
 
     // Parse and validate body
-    const validatedData = updateTestSeriesSchema.parse(JSON.parse(req.body.data || '{}'));
+    let parsedData;
+    try {
+      parsedData = JSON.parse(req.body.data || '{}');
+    } catch (error) {
+      logger.error('Failed to parse req.body.data:', error);
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Invalid data format', code: 'INVALID_JSON' },
+      });
+    }
+
+    const validatedData = updateTestSeriesSchema.parse(parsedData);
 
     // Generate new slug if title changed
     let slug = existingTestSeries.slug;
@@ -181,13 +212,17 @@ export const updateTestSeries = async (req: Request, res: Response) => {
     // Handle thumbnail upload
     let thumbnailUrl = existingTestSeries.thumbnail;
     if (req.file) {
-      // Delete old thumbnail
+      // Delete old thumbnail if exists
       if (existingTestSeries.thumbnail) {
         await deleteFromR2(existingTestSeries.thumbnail);
       }
       // Upload new thumbnail
       const { url } = await uploadThumbnail(req.file);
       thumbnailUrl = url;
+    } else if (parsedData.thumbnailUrl && parsedData.thumbnailUrl !== existingTestSeries.thumbnail) {
+      // Updated to pre-uploaded URL
+      thumbnailUrl = parsedData.thumbnailUrl;
+      logger.info('Updating to pre-uploaded thumbnail:', thumbnailUrl);
     }
 
     // Update test series
@@ -209,7 +244,12 @@ export const updateTestSeries = async (req: Request, res: Response) => {
       message: 'Test series updated successfully',
     });
   } catch (error: any) {
-    logger.error('Update test series error:', error);
+    logger.error('Update test series error:', {
+      error: error.message,
+      hasReqFile: !!req.file,
+      hasReqBodyData: !!req.body.data,
+      bodyKeys: Object.keys(req.body),
+    });
 
     if (error.errors) {
       return res.status(400).json({

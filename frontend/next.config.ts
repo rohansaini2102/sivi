@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "siviacademy.in",
       },
+      {
+        protocol: "https",
+        hostname: "pub-63e69ca1de6e40e8ac9e052c56572c79.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "pub-82455a256b68c851b86573264e0f88cd.r2.dev",
+      },
     ],
   },
 

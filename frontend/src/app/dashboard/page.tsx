@@ -76,35 +76,8 @@ export default function DashboardPage() {
     },
   ];
 
-  const recentActivity = [
-    {
-      type: 'test',
-      title: 'RAS Prelims Mock Test #3',
-      subtitle: 'Score: 72/100',
-      time: '2 hours ago',
-      icon: FileText,
-      iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600',
-    },
-    {
-      type: 'course',
-      title: 'Rajasthan History - Chapter 5',
-      subtitle: 'Completed',
-      time: 'Yesterday',
-      icon: BookOpen,
-      iconBg: 'bg-primary/10',
-      iconColor: 'text-primary',
-    },
-    {
-      type: 'achievement',
-      title: 'First Test Completed',
-      subtitle: 'Achievement Unlocked',
-      time: '2 days ago',
-      icon: Award,
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-    },
-  ];
+  // No recent activity yet - removed dummy data
+  const recentActivity: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -192,44 +165,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Continue Learning */}
+          {/* Continue Learning - Removed dummy data */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Continue Learning</CardTitle>
-                <Link
-                  href="/dashboard/courses"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  View All
-                </Link>
-              </div>
+              <CardTitle className="text-lg">Continue Learning</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500">
-                  <BookOpen className="h-6 w-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate font-semibold text-foreground">
-                    Rajasthan GK Complete Course
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Chapter 5: History of Rajasthan
-                  </p>
-                  <div className="mt-2 flex items-center gap-3">
-                    <Progress value={35} className="h-2 flex-1" />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      35%
-                    </span>
-                  </div>
-                </div>
-                <Button size="icon" className="hidden sm:flex" asChild>
-                  <Link href="/dashboard/courses/1">
-                    <Play className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              <p>No courses in progress yet.</p>
+              <Button asChild className="mt-4">
+                <Link href="/courses">Browse Courses</Link>
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -283,27 +228,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Upcoming Test */}
-          <Card className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-0">
-            <CardContent className="p-5">
-              <div className="mb-3 flex items-center gap-2 text-purple-200">
-                <Calendar className="h-4 w-4" />
-                <span className="text-sm">Tomorrow, 10:00 AM</span>
-              </div>
-              <h3 className="mb-2 font-semibold">RAS Prelims Full Mock Test</h3>
-              <p className="mb-4 text-sm text-purple-200">
-                150 Questions • 3 Hours
-              </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="bg-white/20 text-white hover:bg-white/30"
-              >
-                <Clock className="mr-2 h-4 w-4" />
-                Set Reminder
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Upcoming Test - Removed dummy data */}
 
           {/* Shop CTA */}
           <Card className="border-dashed">

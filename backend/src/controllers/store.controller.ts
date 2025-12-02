@@ -66,8 +66,9 @@ export const getCourseBySlug = async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
+    // Subjects/chapters will be populated later - not needed for initial launch
+    // Just return the course with basic info for marketing/purchase
     const course = await Course.findOne({ slug, isPublished: true })
-      .populate('subjects', 'title description')
       .lean();
 
     if (!course) {
@@ -151,8 +152,9 @@ export const getTestSeriesBySlug = async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
+    // Exams will be populated later - not needed for initial launch
+    // Just return the test series with basic info for marketing/purchase
     const testSeries = await TestSeries.findOne({ slug, isPublished: true })
-      .populate('exams', 'title description totalQuestions duration isFree')
       .lean();
 
     if (!testSeries) {

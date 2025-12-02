@@ -27,57 +27,8 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CourseCard } from '@/components/cards';
 
-// Mock enrolled courses data
-const mockEnrolledCourses = [
-  {
-    id: '1',
-    title: 'RAS Complete Course 2024',
-    shortDescription: 'Comprehensive preparation for Rajasthan Administrative Service exam.',
-    thumbnail: '',
-    category: 'RAS',
-    price: 1999,
-    validityDays: 365,
-    daysLeft: 280,
-    language: 'both' as const,
-    level: 'intermediate' as const,
-    totalLessons: 180,
-    completedLessons: 45,
-    lastAccessed: '2024-11-30',
-    isEnrolled: true,
-  },
-  {
-    id: '2',
-    title: 'REET Level 1 & 2 Complete',
-    shortDescription: 'Complete preparation for REET Level 1 and Level 2.',
-    thumbnail: '',
-    category: 'REET',
-    price: 999,
-    validityDays: 180,
-    daysLeft: 120,
-    language: 'hi' as const,
-    level: 'beginner' as const,
-    totalLessons: 120,
-    completedLessons: 85,
-    lastAccessed: '2024-11-29',
-    isEnrolled: true,
-  },
-  {
-    id: '3',
-    title: 'Rajasthan GK Complete Course',
-    shortDescription: 'Complete Rajasthan GK for all competitive exams.',
-    thumbnail: '',
-    category: 'OTHER',
-    price: 699,
-    validityDays: 180,
-    daysLeft: 90,
-    language: 'hi' as const,
-    level: 'beginner' as const,
-    totalLessons: 60,
-    completedLessons: 60,
-    lastAccessed: '2024-11-20',
-    isEnrolled: true,
-  },
-];
+// Enrolled courses will come from real API - removed dummy data
+const enrolledCourses: any[] = [];
 
 const categoryColors: Record<string, string> = {
   RAS: 'bg-indigo-100 text-indigo-700',
@@ -94,42 +45,10 @@ export default function MyCoursesPage() {
   const [sortBy, setSortBy] = useState('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Calculate course status
-  const getStatus = (course: typeof mockEnrolledCourses[0]) => {
-    const progress = Math.round((course.completedLessons / course.totalLessons) * 100);
-    if (progress === 100) return 'completed';
-    if (progress > 0) return 'in-progress';
-    return 'not-started';
-  };
-
-  // Filter and sort courses
-  const filteredCourses = mockEnrolledCourses
-    .filter((course) => {
-      if (searchQuery && !course.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      if (filterStatus !== 'all' && getStatus(course) !== filterStatus) {
-        return false;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'recent':
-          return new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime();
-        case 'progress':
-          const progressA = a.completedLessons / a.totalLessons;
-          const progressB = b.completedLessons / b.totalLessons;
-          return progressB - progressA;
-        case 'expiring':
-          return a.daysLeft - b.daysLeft;
-        default:
-          return 0;
-      }
-    });
-
-  const inProgress = mockEnrolledCourses.filter((c) => getStatus(c) === 'in-progress').length;
-  const completed = mockEnrolledCourses.filter((c) => getStatus(c) === 'completed').length;
+  // No enrolled courses yet - empty arrays
+  const filteredCourses = enrolledCourses;
+  const inProgress = 0;
+  const completed = 0;
 
   return (
     <div className="space-y-6">
@@ -138,7 +57,7 @@ export default function MyCoursesPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">My Courses</h1>
           <p className="text-muted-foreground">
-            {mockEnrolledCourses.length} courses enrolled
+            {enrolledCourses.length} courses enrolled
           </p>
         </div>
         <Button asChild>
@@ -153,7 +72,7 @@ export default function MyCoursesPage() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-foreground">{mockEnrolledCourses.length}</p>
+            <p className="text-2xl font-bold text-foreground">{enrolledCourses.length}</p>
             <p className="text-sm text-muted-foreground">Total Enrolled</p>
           </CardContent>
         </Card>

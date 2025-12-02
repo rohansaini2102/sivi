@@ -40,6 +40,7 @@ interface TestSeriesFormData {
   features: string[];
   isFree: boolean;
   isFeatured: boolean;
+  isPublished: boolean;
 }
 
 export default function TestSeriesFormPage() {
@@ -63,6 +64,7 @@ export default function TestSeriesFormPage() {
     features: [''],
     isFree: false,
     isFeatured: false,
+    isPublished: false,
   });
   const [slug, setSlug] = useState('');
 
@@ -99,6 +101,7 @@ export default function TestSeriesFormPage() {
           features: ts.features?.length > 0 ? ts.features : [''],
           isFree: ts.isFree,
           isFeatured: ts.isFeatured,
+          isPublished: ts.isPublished,
         });
         setSlug(ts.slug);
       } else {
@@ -127,23 +130,40 @@ export default function TestSeriesFormPage() {
       // Clean up features array
       const cleanedFeatures = formData.features.filter((f) => f.trim() !== '');
 
+      // Prepare data object
+      const dataToSend = {
+        title: formData.title,
+        description: formData.description,
+        shortDescription: formData.shortDescription,
+        examCategory: formData.examCategory,
+        price: formData.price,
+        discountPrice: formData.discountPrice,
+        validityDays: formData.validityDays,
+        language: formData.language,
+        features: cleanedFeatures,
+        isFree: formData.isFree,
+        isFeatured: formData.isFeatured,
+        isPublished: formData.isPublished,
+        thumbnailUrl: formData.thumbnail, // Pre-uploaded URL
+      };
+
+      // Create FormData and add data as JSON string
+      const submitData = new FormData();
+      submitData.append('data', JSON.stringify(dataToSend));
+
       const res = await fetch(endpoint, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          // NO Content-Type header - browser sets multipart boundary
         },
-        body: JSON.stringify({
-          ...formData,
-          features: cleanedFeatures,
-          thumbnailUrl: formData.thumbnail,
-        }),
+        body: submitData, // Send FormData, not JSON
       });
       const data = await res.json();
 
       if (data.success) {
         toast.success(isNew ? 'Test series created successfully' : 'Test series updated successfully');
-        router.push('/admin/content');
+        router.push('/admin/content?refresh=true');
       } else {
         toast.error(data.error?.message || 'Failed to save test series');
       }
@@ -459,6 +479,20 @@ export default function TestSeriesFormPage() {
                   id="isFeatured"
                   checked={formData.isFeatured}
                   onCheckedChange={(checked) => setFormData({ ...formData, isFeatured: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="isPublished" className="text-slate-300">Published</Label>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Unpublished test series won't appear in the store
+                  </p>
+                </div>
+                <Switch
+                  id="isPublished"
+                  checked={formData.isPublished}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
                 />
               </div>
             </CardContent>

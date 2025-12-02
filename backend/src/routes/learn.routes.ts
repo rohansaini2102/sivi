@@ -1,11 +1,14 @@
 import { Router } from 'express';
+import { getEnrollments, checkEnrollment } from '../controllers/learn.controller';
+import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
 // GET /api/learn/enrollments
-router.get('/enrollments', (req, res) => {
-  res.json({ message: 'Get enrollments - To be implemented' });
-});
+router.get('/enrollments', authenticate, getEnrollments);
+
+// GET /api/learn/check-enrollment
+router.get('/check-enrollment', authenticate, checkEnrollment);
 
 // GET /api/learn/course/:courseId
 router.get('/course/:courseId', (req, res) => {
