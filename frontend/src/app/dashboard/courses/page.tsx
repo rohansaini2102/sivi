@@ -244,24 +244,49 @@ export default function MyCoursesPage() {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCourses.map((course, index) => (
-            <motion.div
-              key={course._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <CourseCard {...course} variant="enrolled" />
-            </motion.div>
-          ))}
+          {filteredCourses.map((enrollment, index) => {
+            const daysLeft = Math.ceil(
+              (new Date(enrollment.validUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+            );
+
+            return (
+              <motion.div
+                key={enrollment._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <CourseCard
+                  id={enrollment.course._id}
+                  title={enrollment.course.title}
+                  category={enrollment.course.category}
+                  thumbnail={enrollment.course.thumbnail}
+                  price={0}
+                  validityDays={0}
+                  language="both"
+                  level="beginner"
+                  variant="enrolled"
+                  isEnrolled={true}
+                  progress={enrollment.progress.percentage}
+                  daysLeft={daysLeft}
+                />
+              </motion.div>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredCourses.map((course, index) => {
-            const progress = Math.round((course.completedLessons / course.totalLessons) * 100);
+          {filteredCourses.map((enrollment, index) => {
+            const progress = enrollment.progress.percentage;
+            const completedCount = enrollment.progress.completedLessons.length;
+            const daysLeft = Math.ceil(
+              (new Date(enrollment.validUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+            );
+            const status = progress >= 100 ? 'completed' : progress > 0 ? 'in-progress' : 'not-started';
+
             return (
               <motion.div
-                key={course._id}
+                key={enrollment._id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -274,8 +299,8 @@ export default function MyCoursesPage() {
                         <div className="flex h-full items-center justify-center">
                           <BookOpen className="h-12 w-12 text-muted-foreground/30" />
                         </div>
-                        <Badge className={`absolute left-3 top-3 ${categoryColors[course.category]}`}>
-                          {course.category}
+                        <Badge className={`absolute left-3 top-3 ${categoryColors[enrollment.course.category]}`}>
+                          {enrollment.course.category}
                         </Badge>
                       </div>
 
@@ -284,7 +309,7 @@ export default function MyCoursesPage() {
                         <div>
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="font-semibold text-foreground line-clamp-1">
-                              {course.title}
+                              {enrollment.course.title}
                             </h3>
                             <Badge
                               variant={
@@ -305,9 +330,6 @@ export default function MyCoursesPage() {
                                 : 'Not Started'}
                             </Badge>
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                            {course.shortDescription}
-                          </p>
                         </div>
 
                         <div className="mt-4 space-y-3">
@@ -316,7 +338,7 @@ export default function MyCoursesPage() {
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">Progress</span>
                               <span className="font-medium text-foreground">
-                                {course.completedLessons}/{course.totalLessons} lessons
+                                {completedCount} lessons completed
                               </span>
                             </div>
                             <Progress value={progress} className="h-2" />
@@ -326,10 +348,10 @@ export default function MyCoursesPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Clock className="h-3.5 w-3.5" />
-                              <span>{course.daysLeft} days left</span>
+                              <span>{daysLeft > 0 ? `${daysLeft} days left` : 'Expired'}</span>
                             </div>
                             <Button size="sm" asChild>
-                              <Link href={`/dashboard/courses/${course.id}`}>
+                              <Link href={`/dashboard/courses/${enrollment.course._id}`}>
                                 <Play className="mr-1 h-3 w-3" />
                                 {progress > 0 ? 'Continue' : 'Start'}
                               </Link>
