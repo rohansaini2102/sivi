@@ -2,22 +2,61 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import logger from '../utils/logger';
 
-// Lazy initialization of Razorpay instance
-let razorpayInstance: Razorpay | null = null;
+// Initialize Razorpay instance eagerly (fails fast if credentials missing)
+const initializeRazorpay = (): Razorpay | null => {
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
 
-const getRazorpay = (): Razorpay => {
-  if (!razorpayInstance) {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keyId || !keySecret) {
+    const missingKeys = [];
+    if (!keyId) missingKeys.push('RAZORPAY_KEY_ID');
+    if (!keySecret) missingKeys.push('RAZORPAY_KEY_SECRET');
 
-    if (!keyId || !keySecret) {
-      throw new Error('Razorpay credentials not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables.');
+    logger.error(`Razorpay initialization failed - Missing: ${missingKeys.join(', ')}`);
+    logger.error(`Available RAZORPAY_* env vars: ${Object.keys(process.env).filter(k => k.startsWith('RAZORPAY')).join(', ') || 'NONE'}`);
+
+    // In production, this is critical - don't start
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(`Razorpay credentials not configured. Missing: ${missingKeys.join(', ')}`);
     }
 
-    razorpayInstance = new Razorpay({
+    // In development, allow server to start but warn
+    logger.warn('Razorpay not initialized - payment features disabled');
+    return null;
+  }
+
+  try {
+    logger.info('✓ Initializing Razorpay with credentials');
+    logger.info(`  Key ID: ${keyId.substring(0, 8)}... (length: ${keyId.length})`);
+    logger.info(`  Key Secret: ****** (length: ${keySecret.length})`);
+
+    const instance = new Razorpay({
       key_id: keyId,
       key_secret: keySecret,
     });
+
+    logger.info('✓ Razorpay initialized successfully');
+    return instance;
+  } catch (error) {
+    logger.error('Failed to initialize Razorpay:', error);
+    throw error;
+  }
+};
+
+// Initialize immediately when module loads
+let razorpayInstance: Razorpay | null = null;
+
+try {
+  razorpayInstance = initializeRazorpay();
+} catch (error) {
+  logger.error('Critical: Razorpay initialization failed at startup', error);
+  // Let the error propagate - server should not start without payment in production
+  throw error;
+}
+
+const getRazorpay = (): Razorpay => {
+  if (!razorpayInstance) {
+    throw new Error('Razorpay is not initialized. Payment features are unavailable.');
   }
   return razorpayInstance;
 };
@@ -80,9 +119,15 @@ export const verifyPaymentSignature = (params: VerifyPaymentParams): boolean => 
   try {
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = params;
 
+    const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+    if (!keySecret) {
+      logger.error('RAZORPAY_KEY_SECRET not available for signature verification');
+      throw new Error('Razorpay credentials not configured');
+    }
+
     const body = `${razorpayOrderId}|${razorpayPaymentId}`;
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+      .createHmac('sha256', keySecret)
       .update(body)
       .digest('hex');
 
@@ -128,7 +173,7 @@ export const verifyPaymentWithRazorpay = async (
     }
 
     // Verify amount (Razorpay amounts are in paise, so divide by 100)
-    const razorpayAmount = payment.amount / 100; // Convert paise to rupees
+    const razorpayAmount = Number(payment.amount) / 100; // Convert paise to rupees
     if (Math.abs(razorpayAmount - expectedAmount) > 0.01) {
       logger.error(`Payment ${razorpayPaymentId} amount mismatch: expected ${expectedAmount}, got ${razorpayAmount}`);
       return false;

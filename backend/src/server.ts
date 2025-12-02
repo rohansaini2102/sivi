@@ -5,11 +5,15 @@ import './env';
 import app from './app';
 import connectDB from './config/database';
 import logger from './utils/logger';
+import { validateEnvironment } from './config/env-validator';
 
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
+    // Validate environment variables FIRST (fail fast if misconfigured)
+    validateEnvironment();
+
     // Connect to MongoDB
     await connectDB();
 

@@ -65,9 +65,19 @@ app.use(cookieParser());
 // HTTP request logging
 app.use(httpLogger);
 
-// Health check
+// Health check with service status
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    services: {
+      database: 'unknown', // Will be checked by connectDB
+      payment: !!process.env.RAZORPAY_KEY_ID && !!process.env.RAZORPAY_KEY_SECRET ? 'ok' : 'disabled',
+      storage: !!process.env.R2_BUCKET_NAME && !!process.env.R2_PUBLIC_URL ? 'ok' : 'disabled',
+    },
+  };
+
+  res.status(200).json(health);
 });
 
 // API Routes

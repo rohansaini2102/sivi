@@ -150,6 +150,21 @@ export const createOrder = async (req: Request, res: Response) => {
   } catch (error: any) {
     logger.error('Create order error:', error);
 
+    // Enhanced error reporting for payment configuration issues
+    if (error.message?.includes('Razorpay credentials') || error.message?.includes('Razorpay is not initialized')) {
+      logger.error('PAYMENT CONFIGURATION ERROR - Environment variables missing!');
+      logger.error(`Available env vars starting with RAZORPAY: ${Object.keys(process.env).filter(k => k.startsWith('RAZORPAY')).join(', ') || 'NONE'}`);
+
+      return res.status(500).json({
+        success: false,
+        error: {
+          message: 'Payment Failed because of a configuration error. Authentication key was missing during initialization.',
+          code: 'PAYMENT_CONFIG_ERROR',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        },
+      });
+    }
+
     if (error.errors) {
       return res.status(400).json({
         success: false,
