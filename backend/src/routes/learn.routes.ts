@@ -1,8 +1,23 @@
 import { Router } from 'express';
-import { getEnrollments, checkEnrollment } from '../controllers/learn.controller';
+import {
+  getEnrollments,
+  checkEnrollment,
+  getCourseContent,
+  getLessonContent,
+  markLessonComplete,
+  getCourseProgress,
+  startQuiz,
+  submitAnswer,
+  submitQuiz,
+  getQuizResult,
+  getQuizAttempts,
+  getDashboardProgress,
+} from '../controllers/learn.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
+
+// ==================== ENROLLMENTS ====================
 
 // GET /api/learn/enrollments
 router.get('/enrollments', authenticate, getEnrollments);
@@ -10,34 +25,44 @@ router.get('/enrollments', authenticate, getEnrollments);
 // GET /api/learn/check-enrollment
 router.get('/check-enrollment', authenticate, checkEnrollment);
 
-// GET /api/learn/course/:courseId
-router.get('/course/:courseId', (req, res) => {
-  res.json({ message: `Get course ${req.params.courseId} - To be implemented` });
-});
+// ==================== COURSE CONTENT ====================
 
-// GET /api/learn/lesson/:lessonId
-router.get('/lesson/:lessonId', (req, res) => {
-  res.json({ message: `Get lesson ${req.params.lessonId} - To be implemented` });
-});
+// GET /api/learn/courses/:courseId - Get course with full structure
+router.get('/courses/:courseId', authenticate, getCourseContent);
 
-// POST /api/learn/lesson/:lessonId/complete
-router.post('/lesson/:lessonId/complete', (req, res) => {
-  res.json({ message: `Complete lesson ${req.params.lessonId} - To be implemented` });
-});
+// GET /api/learn/courses/:courseId/progress - Get user progress for course
+router.get('/courses/:courseId/progress', authenticate, getCourseProgress);
 
-// GET /api/learn/quiz/:quizId
-router.get('/quiz/:quizId', (req, res) => {
-  res.json({ message: `Get quiz ${req.params.quizId} - To be implemented` });
-});
+// ==================== LESSONS ====================
 
-// POST /api/learn/quiz/:quizId/submit
-router.post('/quiz/:quizId/submit', (req, res) => {
-  res.json({ message: `Submit quiz ${req.params.quizId} - To be implemented` });
-});
+// GET /api/learn/lessons/:lessonId - Get lesson content
+router.get('/lessons/:lessonId', authenticate, getLessonContent);
 
-// GET /api/learn/progress/:courseId
-router.get('/progress/:courseId', (req, res) => {
-  res.json({ message: `Get progress for ${req.params.courseId} - To be implemented` });
-});
+// POST /api/learn/lessons/:lessonId/complete - Mark lesson as complete
+router.post('/lessons/:lessonId/complete', authenticate, markLessonComplete);
+
+// ==================== QUIZZES ====================
+
+// POST /api/learn/quizzes/:quizId/start - Start quiz attempt
+router.post('/quizzes/:quizId/start', authenticate, startQuiz);
+
+// GET /api/learn/quizzes/:quizId/attempts - Get user's quiz attempts history
+router.get('/quizzes/:quizId/attempts', authenticate, getQuizAttempts);
+
+// ==================== QUIZ ATTEMPTS ====================
+
+// POST /api/learn/quiz-attempts/:attemptId/answer - Submit answer (practice mode)
+router.post('/quiz-attempts/:attemptId/answer', authenticate, submitAnswer);
+
+// POST /api/learn/quiz-attempts/:attemptId/submit - Submit entire quiz
+router.post('/quiz-attempts/:attemptId/submit', authenticate, submitQuiz);
+
+// GET /api/learn/quiz-attempts/:attemptId/result - Get quiz result
+router.get('/quiz-attempts/:attemptId/result', authenticate, getQuizResult);
+
+// ==================== DASHBOARD ====================
+
+// GET /api/learn/dashboard/progress - Get all courses progress
+router.get('/dashboard/progress', authenticate, getDashboardProgress);
 
 export default router;

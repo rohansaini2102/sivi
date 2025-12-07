@@ -23,9 +23,15 @@ export interface IQuestion extends Document {
   difficulty: 'easy' | 'medium' | 'hard';
   examCategory: string;
   tags: string[];
+  source?: string; // e.g., "UPSC 2023", "RAS 2022"
+  year?: number;
   isActive: boolean;
   usedInQuizzes: Types.ObjectId[];
   usedInExams: Types.ObjectId[];
+  // Analytics
+  timesAnswered: number;
+  timesCorrect: number;
+  avgTimeTaken: number; // seconds
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -73,6 +79,15 @@ const questionSchema = new Schema<IQuestion>(
       enum: ['RAS', 'REET', 'PATWAR', 'POLICE', 'RPSC', 'OTHER'],
     },
     tags: [String],
+    source: {
+      type: String,
+      maxlength: 100,
+    },
+    year: {
+      type: Number,
+      min: 1900,
+      max: 2100,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -85,6 +100,19 @@ const questionSchema = new Schema<IQuestion>(
       type: Schema.Types.ObjectId,
       ref: 'Exam',
     }],
+    // Analytics
+    timesAnswered: {
+      type: Number,
+      default: 0,
+    },
+    timesCorrect: {
+      type: Number,
+      default: 0,
+    },
+    avgTimeTaken: {
+      type: Number,
+      default: 0,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -100,5 +128,9 @@ const questionSchema = new Schema<IQuestion>(
 questionSchema.index({ subject: 1, examCategory: 1 });
 questionSchema.index({ difficulty: 1 });
 questionSchema.index({ tags: 1 });
+questionSchema.index({ topic: 1 });
+questionSchema.index({ source: 1, year: 1 });
+questionSchema.index({ usedInQuizzes: 1 });
+questionSchema.index({ isActive: 1 });
 
 export default mongoose.model<IQuestion>('Question', questionSchema);

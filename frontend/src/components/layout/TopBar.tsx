@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 
 interface TopBarProps {
   onMenuClick?: () => void;
@@ -35,21 +34,13 @@ export function TopBar({ onMenuClick, showSearch = true, variant = 'user' }: Top
 
   return (
     <header
-      className={cn(
-        'sticky top-0 z-40 flex h-16 items-center gap-4 border-b px-4 md:px-6',
-        variant === 'admin'
-          ? 'border-slate-700 bg-slate-900'
-          : 'border-border bg-card'
-      )}
+      className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border bg-card px-4 md:px-6"
     >
       {/* Mobile Menu Button */}
       <Button
         variant="ghost"
         size="icon"
-        className={cn(
-          'md:hidden',
-          variant === 'admin' && 'text-slate-400 hover:text-white hover:bg-slate-800'
-        )}
+        className="md:hidden"
         onClick={onMenuClick}
       >
         <Menu className="h-5 w-5" />
@@ -64,11 +55,7 @@ export function TopBar({ onMenuClick, showSearch = true, variant = 'user' }: Top
             <Input
               type="search"
               placeholder="Search courses, tests..."
-              className={cn(
-                'w-full pl-10',
-                variant === 'admin' &&
-                  'border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:ring-primary'
-              )}
+              className="w-full pl-10"
             />
           </div>
         </div>
@@ -83,10 +70,7 @@ export function TopBar({ onMenuClick, showSearch = true, variant = 'user' }: Top
         <Button
           variant="ghost"
           size="icon"
-          className={cn(
-            'relative',
-            variant === 'admin' && 'text-slate-400 hover:text-white hover:bg-slate-800'
-          )}
+          className="relative"
         >
           <Bell className="h-5 w-5" />
           <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
@@ -101,13 +85,7 @@ export function TopBar({ onMenuClick, showSearch = true, variant = 'user' }: Top
               className="relative h-9 w-9 rounded-full"
             >
               <Avatar className="h-9 w-9">
-                <AvatarFallback
-                  className={cn(
-                    variant === 'admin'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
-                  )}
-                >
+                <AvatarFallback className="bg-primary text-primary-foreground">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>

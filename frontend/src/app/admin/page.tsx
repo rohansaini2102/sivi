@@ -143,13 +143,13 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">
             Welcome back, {user?.name?.split(' ')[0] || 'Admin'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800" asChild>
+          <Button variant="outline" asChild>
             <Link href="/admin/content">
               <Plus className="mr-2 h-4 w-4" />
               Create Content
@@ -167,17 +167,17 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-card border-border">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-400">{stat.title}</p>
+                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
                     <div className="flex items-baseline gap-2">
-                      <p className="text-2xl font-semibold text-white">{stat.value}</p>
+                      <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
                       {stat.trend && (
                         <span
                           className={`flex items-center text-xs font-medium ${
-                            stat.trend.isPositive ? 'text-emerald-400' : 'text-red-400'
+                            stat.trend.isPositive ? 'text-emerald-600' : 'text-red-600'
                           }`}
                         >
                           {stat.trend.isPositive ? (
@@ -190,11 +190,11 @@ export default function AdminDashboardPage() {
                       )}
                     </div>
                     {stat.description && (
-                      <p className="text-xs text-slate-500">{stat.description}</p>
+                      <p className="text-xs text-muted-foreground">{stat.description}</p>
                     )}
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700">
-                    <stat.icon className="h-5 w-5 text-slate-300" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                    <stat.icon className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
               </CardContent>
@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-white">Quick Actions</h2>
+        <h2 className="mb-4 text-lg font-semibold text-foreground">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {quickActions.map((action, index) => (
             <motion.div
@@ -228,10 +228,10 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Activity */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-white">Recent Activity</CardTitle>
+              <CardTitle className="text-lg text-foreground">Recent Activity</CardTitle>
               <Link
                 href="/admin/payments"
                 className="text-sm font-medium text-primary hover:underline"
@@ -241,14 +241,14 @@ export default function AdminDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-slate-700">
+            <div className="divide-y divide-border">
               {recentActivity.map((activity, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-700/50"
+                  className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
                 >
                   <div
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${activity.iconBg}`}
@@ -256,10 +256,10 @@ export default function AdminDashboardPage() {
                     <activity.icon className={`h-5 w-5 ${activity.iconColor}`} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-white">{activity.title}</p>
-                    <p className="text-sm text-slate-400">{activity.subtitle}</p>
+                    <p className="font-medium text-foreground">{activity.title}</p>
+                    <p className="text-sm text-muted-foreground">{activity.subtitle}</p>
                   </div>
-                  <span className="shrink-0 text-xs text-slate-500">
+                  <span className="shrink-0 text-xs text-muted-foreground">
                     {activity.time}
                   </span>
                 </motion.div>
@@ -269,10 +269,10 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Recent Users */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-white">Recent Users</CardTitle>
+              <CardTitle className="text-lg text-foreground">Recent Users</CardTitle>
               <Link
                 href="/admin/users"
                 className="text-sm font-medium text-primary hover:underline"
@@ -282,29 +282,29 @@ export default function AdminDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-slate-700">
+            <div className="divide-y divide-border">
               {recentUsers.map((user, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-700/50"
+                  className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700">
-                    <span className="text-sm font-medium text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <span className="text-sm font-medium text-foreground">
                       {user.name.charAt(0)}
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-white">{user.name}</p>
-                    <p className="truncate text-sm text-slate-400">{user.email}</p>
+                    <p className="font-medium text-foreground">{user.name}</p>
+                    <p className="truncate text-sm text-muted-foreground">{user.email}</p>
                   </div>
                   <div className="text-right">
-                    <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+                    <Badge variant="secondary">
                       {user.enrolled} enrolled
                     </Badge>
-                    <p className="mt-1 text-xs text-slate-500">{user.joined}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{user.joined}</p>
                   </div>
                 </motion.div>
               ))}
@@ -315,19 +315,19 @@ export default function AdminDashboardPage() {
 
       {/* Content Overview */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Published Courses</p>
-                <p className="text-3xl font-bold text-white">9</p>
+                <p className="text-sm text-muted-foreground">Published Courses</p>
+                <p className="text-3xl font-bold text-foreground">9</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/20">
-                <BookOpen className="h-6 w-6 text-emerald-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
+                <BookOpen className="h-6 w-6 text-emerald-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-slate-400">3 drafts</span>
+              <span className="text-muted-foreground">3 drafts</span>
               <Link href="/admin/content" className="text-primary hover:underline">
                 Manage →
               </Link>
@@ -335,19 +335,19 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Published Test Series</p>
-                <p className="text-3xl font-bold text-white">6</p>
+                <p className="text-sm text-muted-foreground">Published Test Series</p>
+                <p className="text-3xl font-bold text-foreground">6</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-500/20">
-                <FileText className="h-6 w-6 text-purple-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
+                <FileText className="h-6 w-6 text-purple-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-slate-400">2 drafts</span>
+              <span className="text-muted-foreground">2 drafts</span>
               <Link href="/admin/content" className="text-primary hover:underline">
                 Manage →
               </Link>
@@ -355,19 +355,19 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Question Bank</p>
-                <p className="text-3xl font-bold text-white">2,450</p>
+                <p className="text-sm text-muted-foreground">Question Bank</p>
+                <p className="text-3xl font-bold text-foreground">2,450</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500/20">
-                <FileText className="h-6 w-6 text-amber-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100">
+                <FileText className="h-6 w-6 text-amber-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-slate-400">+120 this week</span>
+              <span className="text-muted-foreground">+120 this week</span>
               <Link href="/admin/questions" className="text-primary hover:underline">
                 Manage →
               </Link>

@@ -42,15 +42,16 @@ const navItems = [
     description: 'Create & manage courses/test series',
   },
   {
-    title: 'Builder',
-    href: '/admin/builder',
+    title: 'Course Builder',
+    href: '/admin/course-builder',
     icon: Hammer,
-    description: 'Build course & test content',
+    description: 'Build course content (subjects, chapters, lessons)',
   },
   {
-    title: 'Questions',
-    href: '/admin/questions',
+    title: 'Question Bank',
+    href: '/admin/question-bank',
     icon: HelpCircle,
+    description: 'Manage quiz questions',
   },
   {
     title: 'Payments',
@@ -71,22 +72,22 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
   return (
     <aside
       className={cn(
-        'flex h-full flex-col bg-slate-900 text-slate-100 transition-all duration-300',
+        'flex h-full flex-col border-r border-border bg-card transition-all duration-300',
         collapsed ? 'w-[70px]' : 'w-[260px]'
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b border-slate-700 px-4">
+      <div className="flex h-16 items-center justify-between border-b border-border px-4">
         {!collapsed && (
           <Link href="/admin" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
               S
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-white">
+              <span className="text-sm font-semibold text-foreground">
                 SiviAcademy
               </span>
-              <span className="text-xs text-slate-400">Admin Panel</span>
+              <span className="text-xs text-muted-foreground">Admin Panel</span>
             </div>
           </Link>
         )}
@@ -102,7 +103,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
+            className="h-8 w-8"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -123,8 +124,8 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white',
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 collapsed && 'justify-center px-2'
               )}
               title={collapsed ? item.title : undefined}
@@ -137,13 +138,13 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
       </nav>
 
       {/* User Info & Logout */}
-      <div className="border-t border-slate-700 p-3">
+      <div className="border-t border-border p-3">
         {!collapsed && user && (
           <div className="mb-3 px-3">
-            <p className="text-sm font-medium text-white truncate">
+            <p className="text-sm font-medium text-foreground truncate">
               {user.name}
             </p>
-            <p className="text-xs text-slate-400 truncate">
+            <p className="text-xs text-muted-foreground truncate">
               {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
             </p>
           </div>
@@ -151,7 +152,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
         <Button
           variant="ghost"
           className={cn(
-            'w-full justify-start gap-3 text-slate-400 hover:text-red-400 hover:bg-slate-800',
+            'w-full justify-start gap-3 text-muted-foreground hover:text-destructive',
             collapsed && 'justify-center px-2'
           )}
           onClick={() => logout()}

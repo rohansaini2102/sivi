@@ -17,14 +17,14 @@ export default function AdminLayout({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-900">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="space-y-4 w-full max-w-md p-8">
-          <Skeleton className="h-8 w-48 mx-auto bg-slate-700" />
-          <Skeleton className="h-4 w-64 mx-auto bg-slate-700" />
+          <Skeleton className="h-8 w-48 mx-auto" />
+          <Skeleton className="h-4 w-64 mx-auto" />
           <div className="flex justify-center gap-2 pt-4">
-            <Skeleton className="h-10 w-10 rounded-full bg-slate-700" />
-            <Skeleton className="h-10 w-10 rounded-full bg-slate-700" />
-            <Skeleton className="h-10 w-10 rounded-full bg-slate-700" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
           </div>
         </div>
       </div>
@@ -49,7 +49,7 @@ export default function AdminLayout({
       </Sheet>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden bg-slate-950">
+      <div className="flex flex-1 flex-col overflow-hidden bg-background">
         {/* Top Bar */}
         <TopBar
           onMenuClick={() => setSidebarOpen(true)}

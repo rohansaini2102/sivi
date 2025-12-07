@@ -144,11 +144,11 @@ export default function AdminUsersPage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return 'bg-purple-600';
+        return 'bg-purple-600 text-white';
       case 'admin':
-        return 'bg-blue-600';
+        return 'bg-blue-600 text-white';
       default:
-        return 'bg-slate-600';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -159,13 +159,13 @@ export default function AdminUsersPage() {
       cell: (user) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-slate-700 text-white">
+            <AvatarFallback className="bg-muted text-foreground">
               {user.name.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium text-white">{user.name}</p>
-            <p className="text-sm text-slate-400">{user.email}</p>
+            <p className="font-medium text-foreground">{user.name}</p>
+            <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
         </div>
       ),
@@ -174,7 +174,7 @@ export default function AdminUsersPage() {
       key: 'phone',
       header: 'Phone',
       cell: (user) => (
-        <span className="text-slate-300">{user.phone || '-'}</span>
+        <span className="text-foreground">{user.phone || '-'}</span>
       ),
     },
     {
@@ -190,7 +190,7 @@ export default function AdminUsersPage() {
       key: 'enrollments',
       header: 'Enrollments',
       cell: (user) => (
-        <div className="flex items-center gap-3 text-sm text-slate-300">
+        <div className="flex items-center gap-3 text-sm text-foreground">
           <span className="flex items-center gap-1">
             <BookOpen className="h-3.5 w-3.5" />
             {user.enrolledCourses}
@@ -218,7 +218,7 @@ export default function AdminUsersPage() {
       key: 'createdAt',
       header: 'Joined',
       cell: (user) => (
-        <span className="text-slate-300 text-sm">{formatDate(user.createdAt)}</span>
+        <span className="text-foreground text-sm">{formatDate(user.createdAt)}</span>
       ),
     },
     {
@@ -228,22 +228,16 @@ export default function AdminUsersPage() {
       cell: (user) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="text-slate-400 hover:text-white">
+            <Button variant="ghost" size="icon-sm">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => setSelectedUser(user)}
-            >
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setSelectedUser(user)}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => handleToggleStatus(user._id)}
-            >
+            <DropdownMenuItem onClick={() => handleToggleStatus(user._id)}>
               {user.isActive ? (
                 <>
                   <UserX className="mr-2 h-4 w-4" />
@@ -267,33 +261,33 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Users</h1>
-          <p className="text-slate-400">Manage all registered users</p>
+          <h1 className="text-2xl font-bold text-foreground">Users</h1>
+          <p className="text-muted-foreground">Manage all registered users</p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-[150px] bg-slate-800 border-slate-700 text-white">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Roles" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-800 border-slate-700">
-            <SelectItem value="all" className="text-white">All Roles</SelectItem>
-            <SelectItem value="user" className="text-white">User</SelectItem>
-            <SelectItem value="admin" className="text-white">Admin</SelectItem>
-            <SelectItem value="super_admin" className="text-white">Super Admin</SelectItem>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="super_admin">Super Admin</SelectItem>
           </SelectContent>
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] bg-slate-800 border-slate-700 text-white">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-800 border-slate-700">
-            <SelectItem value="all" className="text-white">All Status</SelectItem>
-            <SelectItem value="active" className="text-white">Active</SelectItem>
-            <SelectItem value="inactive" className="text-white">Inactive</SelectItem>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -311,25 +305,25 @@ export default function AdminUsersPage() {
         searchPlaceholder="Search by name, email, or phone..."
         keyExtractor={(user) => user._id}
         emptyMessage="No users found"
-        emptyIcon={<Users className="h-12 w-12 text-slate-600" />}
+        emptyIcon={<Users className="h-12 w-12 text-muted-foreground" />}
       />
 
       {/* User Details Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <DialogContent className="bg-slate-800 border-slate-700 max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">User Details</DialogTitle>
+            <DialogTitle>User Details</DialogTitle>
           </DialogHeader>
           {selectedUser && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-slate-700 text-white text-xl">
+                  <AvatarFallback className="bg-muted text-foreground text-xl">
                     {selectedUser.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{selectedUser.name}</h3>
+                  <h3 className="text-lg font-semibold text-foreground">{selectedUser.name}</h3>
                   <Badge className={getRoleColor(selectedUser.role)}>
                     {selectedUser.role === 'super_admin' ? 'Super Admin' : selectedUser.role.charAt(0).toUpperCase() + selectedUser.role.slice(1)}
                   </Badge>
@@ -337,40 +331,40 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center gap-3 text-slate-300">
-                  <Mail className="h-4 w-4 text-slate-500" />
+                <div className="flex items-center gap-3 text-foreground">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
                   <span>{selectedUser.email}</span>
                 </div>
                 {selectedUser.phone && (
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <Phone className="h-4 w-4 text-slate-500" />
+                  <div className="flex items-center gap-3 text-foreground">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
                     <span>{selectedUser.phone}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-3 text-slate-300">
-                  <Calendar className="h-4 w-4 text-slate-500" />
+                <div className="flex items-center gap-3 text-foreground">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>Joined {formatDate(selectedUser.createdAt)}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700">
-                <div className="text-center p-3 rounded-lg bg-slate-900">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                <div className="text-center p-3 rounded-lg bg-muted">
                   <BookOpen className="h-5 w-5 mx-auto text-primary mb-1" />
-                  <p className="text-2xl font-bold text-white">{selectedUser.enrolledCourses}</p>
-                  <p className="text-xs text-slate-400">Courses</p>
+                  <p className="text-2xl font-bold text-foreground">{selectedUser.enrolledCourses}</p>
+                  <p className="text-xs text-muted-foreground">Courses</p>
                 </div>
-                <div className="text-center p-3 rounded-lg bg-slate-900">
+                <div className="text-center p-3 rounded-lg bg-muted">
                   <FileText className="h-5 w-5 mx-auto text-emerald-500 mb-1" />
-                  <p className="text-2xl font-bold text-white">{selectedUser.enrolledTestSeries}</p>
-                  <p className="text-xs text-slate-400">Test Series</p>
+                  <p className="text-2xl font-bold text-foreground">{selectedUser.enrolledTestSeries}</p>
+                  <p className="text-xs text-muted-foreground">Test Series</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-slate-700">
-                <span className="text-slate-400">Account Status</span>
+              <div className="flex items-center justify-between pt-4 border-t border-border">
+                <span className="text-muted-foreground">Account Status</span>
                 <Badge
                   variant={selectedUser.isActive ? 'default' : 'secondary'}
-                  className={selectedUser.isActive ? 'bg-emerald-600' : 'bg-red-600'}
+                  className={selectedUser.isActive ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}
                 >
                   {selectedUser.isActive ? 'Active' : 'Inactive'}
                 </Badge>

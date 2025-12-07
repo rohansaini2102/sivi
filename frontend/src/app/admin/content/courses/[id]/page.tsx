@@ -215,16 +215,16 @@ export default function CourseFormPage() {
             variant="ghost"
             size="icon"
             onClick={() => router.push('/admin/content')}
-            className="text-slate-400 hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-foreground">
               {isNew ? 'Create Course' : 'Edit Course'}
             </h1>
             {slug && (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 Slug: {slug}
               </p>
             )}
@@ -234,7 +234,7 @@ export default function CourseFormPage() {
           {!isNew && slug && (
             <Button
               variant="outline"
-              className="border-slate-700 text-slate-300"
+              className="border-border text-foreground"
               asChild
             >
               <Link href={`/courses/${slug}`} target="_blank">
@@ -258,25 +258,25 @@ export default function CourseFormPage() {
         {/* Main Content */}
         <div className="space-y-6 lg:col-span-2">
           {/* Basic Info */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Basic Information</CardTitle>
+              <CardTitle className="text-foreground">Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-slate-300">Title *</Label>
+                <Label htmlFor="title" className="text-foreground">Title *</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Enter course title"
-                  className="bg-slate-900 border-slate-700 text-white"
+                  className="bg-background border-border text-foreground"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="shortDescription" className="text-slate-300">
+                <Label htmlFor="shortDescription" className="text-foreground">
                   Short Description
                 </Label>
                 <Textarea
@@ -285,31 +285,31 @@ export default function CourseFormPage() {
                   onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
                   placeholder="Brief description (max 300 characters)"
                   maxLength={300}
-                  className="bg-slate-900 border-slate-700 text-white resize-none"
+                  className="bg-background border-border text-foreground resize-none"
                   rows={2}
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {formData.shortDescription.length}/300 characters
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300">Description *</Label>
+                <Label className="text-foreground">Description *</Label>
                 <RichTextEditor
                   value={formData.description}
                   onChange={(value) => setFormData({ ...formData, description: value })}
                   placeholder="Enter detailed course description..."
                   minHeight="250px"
-                  className="bg-slate-900 border-slate-700"
+                  className="bg-background border-border"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Features */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Course Features</CardTitle>
+              <CardTitle className="text-foreground">Course Features</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {formData.features.map((feature, index) => (
@@ -318,14 +318,14 @@ export default function CourseFormPage() {
                     value={feature}
                     onChange={(e) => updateFeature(index, e.target.value)}
                     placeholder={`Feature ${index + 1}`}
-                    className="bg-slate-900 border-slate-700 text-white"
+                    className="bg-background border-border text-foreground"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => removeFeature(index)}
-                    className="text-slate-400 hover:text-red-400"
+                    className="text-muted-foreground hover:text-red-400"
                   >
                     &times;
                   </Button>
@@ -335,7 +335,7 @@ export default function CourseFormPage() {
                 type="button"
                 variant="outline"
                 onClick={addFeature}
-                className="border-slate-700 text-slate-300"
+                className="border-border text-foreground"
               >
                 + Add Feature
               </Button>
@@ -346,9 +346,9 @@ export default function CourseFormPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Thumbnail */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Thumbnail</CardTitle>
+              <CardTitle className="text-foreground">Thumbnail</CardTitle>
             </CardHeader>
             <CardContent>
               <ImageUpload
@@ -360,23 +360,23 @@ export default function CourseFormPage() {
           </Card>
 
           {/* Category & Level */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Category & Level</CardTitle>
+              <CardTitle className="text-foreground">Category & Level</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-slate-300">Exam Category *</Label>
+                <Label className="text-foreground">Exam Category *</Label>
                 <Select
                   value={formData.examCategory}
                   onValueChange={(value) => setFormData({ ...formData, examCategory: value })}
                 >
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                  <SelectTrigger className="bg-background border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-card border-border">
                     {EXAM_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat} className="text-white">
+                      <SelectItem key={cat} value={cat} className="text-foreground">
                         {cat}
                       </SelectItem>
                     ))}
@@ -385,19 +385,19 @@ export default function CourseFormPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300">Language</Label>
+                <Label className="text-foreground">Language</Label>
                 <Select
                   value={formData.language}
                   onValueChange={(value: 'hi' | 'en' | 'both') =>
                     setFormData({ ...formData, language: value })
                   }
                 >
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                  <SelectTrigger className="bg-background border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-card border-border">
                     {LANGUAGES.map((lang) => (
-                      <SelectItem key={lang.value} value={lang.value} className="text-white">
+                      <SelectItem key={lang.value} value={lang.value} className="text-foreground">
                         {lang.label}
                       </SelectItem>
                     ))}
@@ -406,19 +406,19 @@ export default function CourseFormPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300">Level</Label>
+                <Label className="text-foreground">Level</Label>
                 <Select
                   value={formData.level}
                   onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') =>
                     setFormData({ ...formData, level: value })
                   }
                 >
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                  <SelectTrigger className="bg-background border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-card border-border">
                     {LEVELS.map((level) => (
-                      <SelectItem key={level.value} value={level.value} className="text-white">
+                      <SelectItem key={level.value} value={level.value} className="text-foreground">
                         {level.label}
                       </SelectItem>
                     ))}
@@ -429,13 +429,13 @@ export default function CourseFormPage() {
           </Card>
 
           {/* Pricing */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Pricing</CardTitle>
+              <CardTitle className="text-foreground">Pricing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="isFree" className="text-slate-300">Free Course</Label>
+                <Label htmlFor="isFree" className="text-foreground">Free Course</Label>
                 <Switch
                   id="isFree"
                   checked={formData.isFree}
@@ -448,19 +448,19 @@ export default function CourseFormPage() {
               {!formData.isFree && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="price" className="text-slate-300">Price (₹) *</Label>
+                    <Label htmlFor="price" className="text-foreground">Price (₹) *</Label>
                     <Input
                       id="price"
                       type="number"
                       min="0"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                      className="bg-slate-900 border-slate-700 text-white"
+                      className="bg-background border-border text-foreground"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="discountPrice" className="text-slate-300">
+                    <Label htmlFor="discountPrice" className="text-foreground">
                       Discount Price (₹)
                     </Label>
                     <Input
@@ -475,14 +475,14 @@ export default function CourseFormPage() {
                         })
                       }
                       placeholder="Leave empty for no discount"
-                      className="bg-slate-900 border-slate-700 text-white"
+                      className="bg-background border-border text-foreground"
                     />
                   </div>
                 </>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="validityDays" className="text-slate-300">
+                <Label htmlFor="validityDays" className="text-foreground">
                   Validity (Days)
                 </Label>
                 <Input
@@ -491,20 +491,20 @@ export default function CourseFormPage() {
                   min="1"
                   value={formData.validityDays}
                   onChange={(e) => setFormData({ ...formData, validityDays: Number(e.target.value) })}
-                  className="bg-slate-900 border-slate-700 text-white"
+                  className="bg-background border-border text-foreground"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Settings */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white">Settings</CardTitle>
+              <CardTitle className="text-foreground">Settings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="isFeatured" className="text-slate-300">Featured</Label>
+                <Label htmlFor="isFeatured" className="text-foreground">Featured</Label>
                 <Switch
                   id="isFeatured"
                   checked={formData.isFeatured}
@@ -514,8 +514,8 @@ export default function CourseFormPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="isPublished" className="text-slate-300">Published</Label>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <Label htmlFor="isPublished" className="text-foreground">Published</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
                     Unpublished courses won't appear in the store
                   </p>
                 </div>

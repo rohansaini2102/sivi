@@ -222,19 +222,48 @@ export const learnApi = {
   getCourseContent: (courseId: string) =>
     api.get(`/learn/courses/${courseId}`),
 
+  // Get course progress
+  getCourseProgress: (courseId: string) =>
+    api.get(`/learn/courses/${courseId}/progress`),
+
+  // Get lesson content
+  getLessonContent: (lessonId: string) =>
+    api.get(`/learn/lessons/${lessonId}`),
+
+  // Mark lesson as completed
+  markLessonComplete: (lessonId: string) =>
+    api.post(`/learn/lessons/${lessonId}/complete`),
+
   // Get test series content (for enrolled users)
   getTestSeriesContent: (testSeriesId: string) =>
     api.get(`/learn/test-series/${testSeriesId}`),
 
-  // Mark lesson as completed
-  markLessonComplete: (enrollmentId: string, lessonId: string) =>
-    api.post(`/learn/enrollments/${enrollmentId}/lessons/${lessonId}/complete`),
+  // Quiz APIs
+  startQuiz: (quizId: string) =>
+    api.post(`/learn/quizzes/${quizId}/start`),
 
-  // Submit exam attempt
+  getQuizAttempts: (quizId: string) =>
+    api.get(`/learn/quizzes/${quizId}/attempts`),
+
+  // Quiz attempt APIs
+  submitAnswer: (attemptId: string, questionId: string, selectedOption: string) =>
+    api.post(`/learn/quiz-attempts/${attemptId}/answer`, { questionId, selectedOption }),
+
+  submitQuiz: (attemptId: string, answers: Record<string, string>) =>
+    api.post(`/learn/quiz-attempts/${attemptId}/submit`, { answers }),
+
+  getQuizResult: (attemptId: string) =>
+    api.get(`/learn/quiz-attempts/${attemptId}/result`),
+
+  // Dashboard
+  getDashboardProgress: () =>
+    api.get('/learn/dashboard/progress'),
+
+  // Submit exam attempt (legacy)
   submitExamAttempt: (examId: string, answers: Record<string, string>) =>
     api.post(`/learn/exams/${examId}/submit`, { answers }),
 
-  // Get exam results
+  // Get exam results (legacy)
   getExamResults: (attemptId: string) =>
     api.get(`/learn/exam-attempts/${attemptId}`),
 };

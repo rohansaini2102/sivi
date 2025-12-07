@@ -246,7 +246,7 @@ export default function AdminContentPage() {
       header: 'Course',
       cell: (course) => (
         <div className="flex items-center gap-3">
-          <div className="relative h-12 w-20 rounded-md overflow-hidden bg-slate-800 flex-shrink-0">
+          <div className="relative h-12 w-20 rounded-md overflow-hidden bg-muted shrink-0">
             {course.thumbnail ? (
               <Image
                 src={course.thumbnail}
@@ -256,13 +256,13 @@ export default function AdminContentPage() {
               />
             ) : (
               <div className="flex h-full items-center justify-center">
-                <BookOpen className="h-5 w-5 text-slate-600" />
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
               </div>
             )}
           </div>
           <div>
-            <p className="font-medium text-white line-clamp-1">{course.title}</p>
-            <p className="text-xs text-slate-400">{course.slug}</p>
+            <p className="font-medium text-foreground line-clamp-1">{course.title}</p>
+            <p className="text-xs text-muted-foreground">{course.slug}</p>
           </div>
         </div>
       ),
@@ -271,7 +271,7 @@ export default function AdminContentPage() {
       key: 'examCategory',
       header: 'Category',
       cell: (course) => (
-        <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+        <Badge variant="secondary">
           {course.examCategory}
         </Badge>
       ),
@@ -281,11 +281,11 @@ export default function AdminContentPage() {
       header: 'Price',
       cell: (course) => (
         <div>
-          <span className="text-white font-medium">
+          <span className="text-foreground font-medium">
             {course.price === 0 ? 'Free' : `₹${course.discountPrice || course.price}`}
           </span>
           {course.discountPrice && course.discountPrice < course.price && (
-            <span className="text-xs text-slate-500 line-through ml-2">
+            <span className="text-xs text-muted-foreground line-through ml-2">
               ₹{course.price}
             </span>
           )}
@@ -296,7 +296,7 @@ export default function AdminContentPage() {
       key: 'enrollmentCount',
       header: 'Enrollments',
       cell: (course) => (
-        <span className="text-slate-300">{course.enrollmentCount}</span>
+        <span className="text-foreground">{course.enrollmentCount}</span>
       ),
     },
     {
@@ -305,7 +305,7 @@ export default function AdminContentPage() {
       cell: (course) => (
         <Badge
           variant={course.isPublished ? 'default' : 'secondary'}
-          className={course.isPublished ? 'bg-emerald-600' : 'bg-slate-700'}
+          className={course.isPublished ? 'bg-emerald-600 text-white' : ''}
         >
           {course.isPublished ? 'Published' : 'Draft'}
         </Badge>
@@ -318,29 +318,20 @@ export default function AdminContentPage() {
       cell: (course) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="text-slate-400 hover:text-white">
+            <Button variant="ghost" size="icon-sm">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => router.push(`/courses/${course.slug}`)}
-            >
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => router.push(`/courses/${course.slug}`)}>
               <Eye className="mr-2 h-4 w-4" />
               View
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => router.push(`/admin/content/courses/${course._id}`)}
-            >
+            <DropdownMenuItem onClick={() => router.push(`/admin/content/courses/${course._id}`)}>
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => handleTogglePublish('course', course._id)}
-            >
+            <DropdownMenuItem onClick={() => handleTogglePublish('course', course._id)}>
               {course.isPublished ? (
                 <>
                   <GlobeLock className="mr-2 h-4 w-4" />
@@ -354,7 +345,7 @@ export default function AdminContentPage() {
               )}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="text-red-400 hover:bg-slate-700 hover:text-red-400"
+              className="text-destructive focus:text-destructive"
               onClick={() => setDeleteDialog({
                 open: true,
                 type: 'course',
@@ -377,7 +368,7 @@ export default function AdminContentPage() {
       header: 'Test Series',
       cell: (ts) => (
         <div className="flex items-center gap-3">
-          <div className="relative h-12 w-20 rounded-md overflow-hidden bg-slate-800 flex-shrink-0">
+          <div className="relative h-12 w-20 rounded-md overflow-hidden bg-muted shrink-0">
             {ts.thumbnail ? (
               <Image
                 src={ts.thumbnail}
@@ -387,13 +378,13 @@ export default function AdminContentPage() {
               />
             ) : (
               <div className="flex h-full items-center justify-center">
-                <FileText className="h-5 w-5 text-slate-600" />
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
             )}
           </div>
           <div>
-            <p className="font-medium text-white line-clamp-1">{ts.title}</p>
-            <p className="text-xs text-slate-400">{ts.totalExams} exams</p>
+            <p className="font-medium text-foreground line-clamp-1">{ts.title}</p>
+            <p className="text-xs text-muted-foreground">{ts.totalExams} exams</p>
           </div>
         </div>
       ),
@@ -402,7 +393,7 @@ export default function AdminContentPage() {
       key: 'examCategory',
       header: 'Category',
       cell: (ts) => (
-        <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+        <Badge variant="secondary">
           {ts.examCategory}
         </Badge>
       ),
@@ -412,11 +403,11 @@ export default function AdminContentPage() {
       header: 'Price',
       cell: (ts) => (
         <div>
-          <span className="text-white font-medium">
+          <span className="text-foreground font-medium">
             {ts.price === 0 ? 'Free' : `₹${ts.discountPrice || ts.price}`}
           </span>
           {ts.discountPrice && ts.discountPrice < ts.price && (
-            <span className="text-xs text-slate-500 line-through ml-2">
+            <span className="text-xs text-muted-foreground line-through ml-2">
               ₹{ts.price}
             </span>
           )}
@@ -427,7 +418,7 @@ export default function AdminContentPage() {
       key: 'enrollmentCount',
       header: 'Enrollments',
       cell: (ts) => (
-        <span className="text-slate-300">{ts.enrollmentCount}</span>
+        <span className="text-foreground">{ts.enrollmentCount}</span>
       ),
     },
     {
@@ -436,7 +427,7 @@ export default function AdminContentPage() {
       cell: (ts) => (
         <Badge
           variant={ts.isPublished ? 'default' : 'secondary'}
-          className={ts.isPublished ? 'bg-emerald-600' : 'bg-slate-700'}
+          className={ts.isPublished ? 'bg-emerald-600 text-white' : ''}
         >
           {ts.isPublished ? 'Published' : 'Draft'}
         </Badge>
@@ -449,29 +440,20 @@ export default function AdminContentPage() {
       cell: (ts) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="text-slate-400 hover:text-white">
+            <Button variant="ghost" size="icon-sm">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => router.push(`/test-series/${ts.slug}`)}
-            >
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => router.push(`/test-series/${ts.slug}`)}>
               <Eye className="mr-2 h-4 w-4" />
               View
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => router.push(`/admin/content/test-series/${ts._id}`)}
-            >
+            <DropdownMenuItem onClick={() => router.push(`/admin/content/test-series/${ts._id}`)}>
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
-              onClick={() => handleTogglePublish('testSeries', ts._id)}
-            >
+            <DropdownMenuItem onClick={() => handleTogglePublish('testSeries', ts._id)}>
               {ts.isPublished ? (
                 <>
                   <GlobeLock className="mr-2 h-4 w-4" />
@@ -485,7 +467,7 @@ export default function AdminContentPage() {
               )}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="text-red-400 hover:bg-slate-700 hover:text-red-400"
+              className="text-destructive focus:text-destructive"
               onClick={() => setDeleteDialog({
                 open: true,
                 type: 'testSeries',
@@ -507,12 +489,12 @@ export default function AdminContentPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Content Management</h1>
-          <p className="text-slate-400">Create and manage courses & test series</p>
+          <h1 className="text-2xl font-bold text-foreground">Content Management</h1>
+          <p className="text-muted-foreground">Create and manage courses & test series</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={() => router.push('/admin/content/test-series/new')}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -529,18 +511,12 @@ export default function AdminContentPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-slate-800 border-slate-700">
-          <TabsTrigger
-            value="courses"
-            className="data-[state=active]:bg-slate-700 data-[state=active]:text-white"
-          >
+        <TabsList>
+          <TabsTrigger value="courses">
             <BookOpen className="mr-2 h-4 w-4" />
             Courses
           </TabsTrigger>
-          <TabsTrigger
-            value="test-series"
-            className="data-[state=active]:bg-slate-700 data-[state=active]:text-white"
-          >
+          <TabsTrigger value="test-series">
             <FileText className="mr-2 h-4 w-4" />
             Test Series
           </TabsTrigger>
@@ -559,7 +535,7 @@ export default function AdminContentPage() {
             searchPlaceholder="Search courses..."
             keyExtractor={(course) => course._id}
             emptyMessage="No courses found"
-            emptyIcon={<BookOpen className="h-12 w-12 text-slate-600" />}
+            emptyIcon={<BookOpen className="h-12 w-12 text-muted-foreground" />}
           />
         </TabsContent>
 
@@ -576,32 +552,25 @@ export default function AdminContentPage() {
             searchPlaceholder="Search test series..."
             keyExtractor={(ts) => ts._id}
             emptyMessage="No test series found"
-            emptyIcon={<FileText className="h-12 w-12 text-slate-600" />}
+            emptyIcon={<FileText className="h-12 w-12 text-muted-foreground" />}
           />
         </TabsContent>
       </Tabs>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-white">Delete {deleteDialog?.type === 'course' ? 'Course' : 'Test Series'}</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle>Delete {deleteDialog?.type === 'course' ? 'Course' : 'Test Series'}</DialogTitle>
+            <DialogDescription>
               Are you sure you want to delete &quot;{deleteDialog?.title}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialog(null)}
-              className="border-slate-600 text-slate-300"
-            >
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-            >
+            <Button variant="destructive" onClick={handleDelete}>
               Delete
             </Button>
           </DialogFooter>

@@ -2,11 +2,17 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface ISubject extends Document {
   title: string;
+  titleHi?: string;
   description?: string;
+  descriptionHi?: string;
+  icon?: string;
   course: Types.ObjectId;
   order: number;
   chapters: Types.ObjectId[];
   isPublished: boolean;
+  // Stats (denormalized for performance)
+  totalChapters: number;
+  totalLessons: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,7 +25,23 @@ const subjectSchema = new Schema<ISubject>(
       trim: true,
       maxlength: 200,
     },
-    description: String,
+    titleHi: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
+    description: {
+      type: String,
+      maxlength: 1000,
+    },
+    descriptionHi: {
+      type: String,
+      maxlength: 1000,
+    },
+    icon: {
+      type: String,
+      maxlength: 50,
+    },
     course: {
       type: Schema.Types.ObjectId,
       ref: 'Course',
@@ -37,6 +59,14 @@ const subjectSchema = new Schema<ISubject>(
       type: Boolean,
       default: false,
     },
+    totalChapters: {
+      type: Number,
+      default: 0,
+    },
+    totalLessons: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -45,5 +75,6 @@ const subjectSchema = new Schema<ISubject>(
 
 // Indexes
 subjectSchema.index({ course: 1, order: 1 });
+subjectSchema.index({ course: 1, isPublished: 1 });
 
 export default mongoose.model<ISubject>('Subject', subjectSchema);

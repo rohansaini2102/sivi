@@ -181,15 +181,15 @@ export default function AdminPaymentsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-emerald-600';
+        return 'bg-emerald-600 text-white';
       case 'pending':
-        return 'bg-amber-600';
+        return 'bg-amber-600 text-white';
       case 'failed':
-        return 'bg-red-600';
+        return 'bg-red-600 text-white';
       case 'refunded':
-        return 'bg-purple-600';
+        return 'bg-purple-600 text-white';
       default:
-        return 'bg-slate-600';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -229,8 +229,8 @@ export default function AdminPaymentsPage() {
       header: 'Customer',
       cell: (payment) => (
         <div>
-          <p className="font-medium text-white">{payment.user?.name || 'Unknown'}</p>
-          <p className="text-sm text-slate-400">{payment.user?.email || '-'}</p>
+          <p className="font-medium text-foreground">{payment.user?.name || 'Unknown'}</p>
+          <p className="text-sm text-muted-foreground">{payment.user?.email || '-'}</p>
         </div>
       ),
     },
@@ -239,10 +239,10 @@ export default function AdminPaymentsPage() {
       header: 'Item',
       cell: (payment) => (
         <div>
-          <p className="font-medium text-white line-clamp-1">
+          <p className="font-medium text-foreground line-clamp-1">
             {payment.course?.title || payment.testSeries?.title || '-'}
           </p>
-          <Badge variant="secondary" className="bg-slate-700 text-xs">
+          <Badge variant="secondary" className="bg-muted text-xs">
             {payment.itemType === 'course' ? 'Course' : 'Test Series'}
           </Badge>
         </div>
@@ -252,7 +252,7 @@ export default function AdminPaymentsPage() {
       key: 'amount',
       header: 'Amount',
       cell: (payment) => (
-        <span className="font-semibold text-white">₹{payment.amount}</span>
+        <span className="font-semibold text-foreground">₹{payment.amount}</span>
       ),
     },
     {
@@ -269,7 +269,7 @@ export default function AdminPaymentsPage() {
       key: 'createdAt',
       header: 'Date',
       cell: (payment) => (
-        <span className="text-slate-300 text-sm">{formatDate(payment.createdAt)}</span>
+        <span className="text-foreground text-sm">{formatDate(payment.createdAt)}</span>
       ),
     },
     {
@@ -279,13 +279,13 @@ export default function AdminPaymentsPage() {
       cell: (payment) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="text-slate-400 hover:text-white">
+            <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
+          <DropdownMenuContent align="end" className="bg-card border-border">
             <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-700"
+              className="text-foreground hover:bg-muted"
               onClick={() => setSelectedPayment(payment)}
             >
               <Eye className="mr-2 h-4 w-4" />
@@ -293,7 +293,7 @@ export default function AdminPaymentsPage() {
             </DropdownMenuItem>
             {payment.status === 'completed' && (
               <DropdownMenuItem
-                className="text-slate-300 hover:bg-slate-700"
+                className="text-foreground hover:bg-muted"
                 onClick={() => {
                   setRefundDialog(payment);
                   setRefundAmount(String(payment.amount));
@@ -314,64 +314,64 @@ export default function AdminPaymentsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Payments</h1>
-          <p className="text-slate-400">View and manage all transactions</p>
+          <h1 className="text-2xl font-bold text-foreground">Payments</h1>
+          <p className="text-muted-foreground">View and manage all transactions</p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Total Revenue</p>
-                <p className="text-2xl font-bold text-white">₹{stats.totalRevenue.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-2xl font-bold text-foreground">₹{stats.totalRevenue.toLocaleString()}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <IndianRupee className="h-5 w-5 text-emerald-400" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <IndianRupee className="h-5 w-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Completed</p>
-                <p className="text-2xl font-bold text-white">{stats.completedCount}</p>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold text-foreground">{stats.completedCount}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-blue-400" />
+              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Pending</p>
-                <p className="text-2xl font-bold text-white">{stats.pendingCount}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-foreground">{stats.pendingCount}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-400" />
+              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Refunded</p>
-                <p className="text-2xl font-bold text-white">₹{stats.refundedAmount.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Refunded</p>
+                <p className="text-2xl font-bold text-foreground">₹{stats.refundedAmount.toLocaleString()}</p>
               </div>
-              <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <RefreshCcw className="h-5 w-5 text-purple-400" />
+              <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <RefreshCcw className="h-5 w-5 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -381,26 +381,26 @@ export default function AdminPaymentsPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] bg-slate-800 border-slate-700 text-white">
+          <SelectTrigger className="w-[150px] bg-card border-border text-foreground">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-800 border-slate-700">
-            <SelectItem value="all" className="text-white">All Status</SelectItem>
-            <SelectItem value="completed" className="text-white">Completed</SelectItem>
-            <SelectItem value="pending" className="text-white">Pending</SelectItem>
-            <SelectItem value="failed" className="text-white">Failed</SelectItem>
-            <SelectItem value="refunded" className="text-white">Refunded</SelectItem>
+          <SelectContent className="bg-card border-border">
+            <SelectItem value="all" className="text-foreground">All Status</SelectItem>
+            <SelectItem value="completed" className="text-foreground">Completed</SelectItem>
+            <SelectItem value="pending" className="text-foreground">Pending</SelectItem>
+            <SelectItem value="failed" className="text-foreground">Failed</SelectItem>
+            <SelectItem value="refunded" className="text-foreground">Refunded</SelectItem>
           </SelectContent>
         </Select>
 
         <Select value={itemTypeFilter} onValueChange={setItemTypeFilter}>
-          <SelectTrigger className="w-[150px] bg-slate-800 border-slate-700 text-white">
+          <SelectTrigger className="w-[150px] bg-card border-border text-foreground">
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-800 border-slate-700">
-            <SelectItem value="all" className="text-white">All Types</SelectItem>
-            <SelectItem value="course" className="text-white">Courses</SelectItem>
-            <SelectItem value="testSeries" className="text-white">Test Series</SelectItem>
+          <SelectContent className="bg-card border-border">
+            <SelectItem value="all" className="text-foreground">All Types</SelectItem>
+            <SelectItem value="course" className="text-foreground">Courses</SelectItem>
+            <SelectItem value="testSeries" className="text-foreground">Test Series</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -415,62 +415,62 @@ export default function AdminPaymentsPage() {
         onLimitChange={(limit) => setPagination((p) => ({ ...p, limit, page: 1 }))}
         keyExtractor={(payment) => payment._id}
         emptyMessage="No payments found"
-        emptyIcon={<CreditCard className="h-12 w-12 text-slate-600" />}
+        emptyIcon={<CreditCard className="h-12 w-12 text-muted-foreground" />}
       />
 
       {/* Payment Details Dialog */}
       <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
-        <DialogContent className="bg-slate-800 border-slate-700 max-w-md">
+        <DialogContent className="bg-card border-border max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Payment Details</DialogTitle>
+            <DialogTitle className="text-foreground">Payment Details</DialogTitle>
           </DialogHeader>
           {selectedPayment && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Status</span>
+                <span className="text-muted-foreground">Status</span>
                 <Badge className={getStatusColor(selectedPayment.status)}>
                   {selectedPayment.status.charAt(0).toUpperCase() + selectedPayment.status.slice(1)}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Amount</span>
-                <span className="text-xl font-bold text-white">₹{selectedPayment.amount}</span>
+                <span className="text-muted-foreground">Amount</span>
+                <span className="text-xl font-bold text-foreground">₹{selectedPayment.amount}</span>
               </div>
 
-              <div className="border-t border-slate-700 pt-4 space-y-3">
+              <div className="border-t border-border pt-4 space-y-3">
                 <div>
-                  <span className="text-xs text-slate-500">Customer</span>
-                  <p className="text-white">{selectedPayment.user?.name}</p>
-                  <p className="text-sm text-slate-400">{selectedPayment.user?.email}</p>
+                  <span className="text-xs text-muted-foreground">Customer</span>
+                  <p className="text-foreground">{selectedPayment.user?.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedPayment.user?.email}</p>
                 </div>
 
                 <div>
-                  <span className="text-xs text-slate-500">Item</span>
-                  <p className="text-white">
+                  <span className="text-xs text-muted-foreground">Item</span>
+                  <p className="text-foreground">
                     {selectedPayment.course?.title || selectedPayment.testSeries?.title}
                   </p>
-                  <Badge variant="secondary" className="bg-slate-700 text-xs mt-1">
+                  <Badge variant="secondary" className="bg-muted text-xs mt-1">
                     {selectedPayment.itemType === 'course' ? 'Course' : 'Test Series'}
                   </Badge>
                 </div>
 
                 <div>
-                  <span className="text-xs text-slate-500">Date</span>
-                  <p className="text-white">{formatDate(selectedPayment.createdAt)}</p>
+                  <span className="text-xs text-muted-foreground">Date</span>
+                  <p className="text-foreground">{formatDate(selectedPayment.createdAt)}</p>
                 </div>
 
                 {selectedPayment.razorpayOrderId && (
                   <div>
-                    <span className="text-xs text-slate-500">Order ID</span>
-                    <p className="text-white font-mono text-sm">{selectedPayment.razorpayOrderId}</p>
+                    <span className="text-xs text-muted-foreground">Order ID</span>
+                    <p className="text-foreground font-mono text-sm">{selectedPayment.razorpayOrderId}</p>
                   </div>
                 )}
 
                 {selectedPayment.razorpayPaymentId && (
                   <div>
-                    <span className="text-xs text-slate-500">Payment ID</span>
-                    <p className="text-white font-mono text-sm">{selectedPayment.razorpayPaymentId}</p>
+                    <span className="text-xs text-muted-foreground">Payment ID</span>
+                    <p className="text-foreground font-mono text-sm">{selectedPayment.razorpayPaymentId}</p>
                   </div>
                 )}
               </div>
@@ -481,22 +481,22 @@ export default function AdminPaymentsPage() {
 
       {/* Refund Dialog */}
       <Dialog open={!!refundDialog} onOpenChange={() => setRefundDialog(null)}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Initiate Refund</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-foreground">Initiate Refund</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Process a refund for this payment. Enter the amount to refund (partial or full).
             </DialogDescription>
           </DialogHeader>
           {refundDialog && (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-slate-900">
-                <p className="text-sm text-slate-400">Original Amount</p>
-                <p className="text-xl font-bold text-white">₹{refundDialog.amount}</p>
+              <div className="p-3 rounded-lg bg-muted">
+                <p className="text-sm text-muted-foreground">Original Amount</p>
+                <p className="text-xl font-bold text-foreground">₹{refundDialog.amount}</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="refundAmount" className="text-slate-300">
+                <Label htmlFor="refundAmount" className="text-foreground">
                   Refund Amount (₹)
                 </Label>
                 <Input
@@ -506,9 +506,9 @@ export default function AdminPaymentsPage() {
                   max={refundDialog.amount}
                   value={refundAmount}
                   onChange={(e) => setRefundAmount(e.target.value)}
-                  className="bg-slate-900 border-slate-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Leave empty or enter full amount for complete refund
                 </p>
               </div>
@@ -518,7 +518,7 @@ export default function AdminPaymentsPage() {
             <Button
               variant="outline"
               onClick={() => setRefundDialog(null)}
-              className="border-slate-600 text-slate-300"
+              className="border-border text-foreground"
             >
               Cancel
             </Button>
