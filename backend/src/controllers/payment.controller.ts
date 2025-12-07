@@ -48,11 +48,12 @@ export const createOrder = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if already enrolled
+    // Check if already enrolled with valid (non-expired) enrollment
     const existingEnrollment = await Enrollment.findOne({
       user: userId,
       [itemType === 'course' ? 'course' : 'testSeries']: itemId,
       isActive: true,
+      validUntil: { $gt: new Date() }, // Only block if enrollment hasn't expired
     });
 
     if (existingEnrollment) {

@@ -26,6 +26,7 @@ import { Progress } from '@/components/ui/progress';
 import Header from '@/components/Header';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
+import { paymentApi } from '@/lib/api';
 
 interface Subject {
   _id: string;
@@ -152,22 +153,8 @@ export default function CourseDetailPage() {
     setIsPurchasing(true);
 
     try {
-      const token = localStorage.getItem('accessToken');
-
-      // Create order
-      const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/create-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          itemId: course._id,
-          itemType: 'course',
-        }),
-      });
-
-      const orderData = await orderRes.json();
+      // Create order using paymentApi (handles token refresh automatically)
+      const { data: orderData } = await paymentApi.createOrder('course', course._id);
 
       if (!orderData.success) {
         throw new Error(orderData.error?.message || 'Failed to create order');
@@ -204,23 +191,14 @@ export default function CourseDetailPage() {
         description: course.title,
         order_id: razorpayOrderId,
         handler: async (response: any) => {
-          // Verify payment
+          // Verify payment using paymentApi (handles token refresh automatically)
           try {
-            const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/verify`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                orderId: orderId,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-              }),
+            const { data: verifyData } = await paymentApi.verifyPayment({
+              orderId: orderId,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
             });
-
-            const verifyData = await verifyRes.json();
 
             if (verifyData.success) {
               toast.success('Payment successful! Redirecting to your courses...');

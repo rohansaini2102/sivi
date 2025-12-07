@@ -178,6 +178,9 @@ export function ImageUpload({
                 {dragActive ? 'Drop image here' : 'Click to upload or drag & drop'}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
+                Recommended: 1280x720 (16:9) for best display
+              </p>
+              <p className="text-xs text-muted-foreground">
                 JPEG, PNG, WebP, GIF (max 5MB)
               </p>
             </div>

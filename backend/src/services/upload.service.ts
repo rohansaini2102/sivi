@@ -80,8 +80,8 @@ export const uploadToR2 = async (
     // Optimize images
     if (optimize && file.mimetype.startsWith('image/')) {
       buffer = await optimizeImage(file.buffer, {
-        width: folder === 'thumbnails' ? 800 : 1200,
-        height: folder === 'thumbnails' ? 600 : 900,
+        width: folder === 'thumbnails' ? 1280 : 1200,
+        height: folder === 'thumbnails' ? 720 : 900,
         quality: 85,
       });
       contentType = 'image/webp';

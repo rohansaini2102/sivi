@@ -32,6 +32,7 @@ import { useAuthStore } from '@/store/authStore';
 import Header from '@/components/Header';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { paymentApi } from '@/lib/api';
 
 interface Exam {
   _id: string;
@@ -199,21 +200,8 @@ export default function TestSeriesDetailPage() {
     setIsPurchasing(true);
 
     try {
-      const token = localStorage.getItem('accessToken');
-
-      const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/create-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          itemId: testSeries._id,
-          itemType: 'test_series',
-        }),
-      });
-
-      const orderData = await orderRes.json();
+      // Create order using paymentApi (handles token refresh automatically)
+      const { data: orderData } = await paymentApi.createOrder('test_series', testSeries._id);
 
       if (!orderData.success) {
         throw new Error(orderData.error?.message || 'Failed to create order');
@@ -248,22 +236,14 @@ export default function TestSeriesDetailPage() {
         description: testSeries.title,
         order_id: razorpayOrderId,
         handler: async (response: any) => {
+          // Verify payment using paymentApi (handles token refresh automatically)
           try {
-            const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment/verify`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                orderId: orderId,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-              }),
+            const { data: verifyData } = await paymentApi.verifyPayment({
+              orderId: orderId,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
             });
-
-            const verifyData = await verifyRes.json();
 
             if (verifyData.success) {
               toast.success('Payment successful! Redirecting to your test series...');
