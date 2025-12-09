@@ -518,7 +518,7 @@ export const getQuizInfo = async (req: Request, res: Response) => {
 export const startQuiz = async (req: Request, res: Response) => {
   try {
     const { quizId } = req.params;
-    const { language = 'en' } = req.body;
+    const { language = 'en', mode: requestedMode } = req.body;
     const userId = req.user!.userId;
 
     const quiz = await Quiz.findById(quizId).populate('questions');
@@ -528,6 +528,11 @@ export const startQuiz = async (req: Request, res: Response) => {
         error: { message: 'Quiz not found', code: 'QUIZ_NOT_FOUND' },
       });
     }
+
+    // Allow user to override mode if provided and valid
+    const effectiveMode = (requestedMode === 'practice' || requestedMode === 'exam')
+      ? requestedMode
+      : quiz.mode;
 
     // Check for existing in-progress attempt
     const existingAttempt = await QuizAttempt.findOne({
@@ -573,7 +578,7 @@ export const startQuiz = async (req: Request, res: Response) => {
           _id: existingAttempt._id,
           quiz: {
             _id: quiz._id,
-            mode: quiz.mode,
+            mode: existingAttempt.mode || quiz.mode, // Use attempt's mode (user-selected)
             duration: quiz.duration,
             correctMarks: quiz.correctMarks,
             wrongMarks: quiz.wrongMarks,
@@ -623,7 +628,7 @@ export const startQuiz = async (req: Request, res: Response) => {
       quiz: quizId,
       lesson: quiz.lesson,
       course: quiz.course,
-      mode: quiz.mode,
+      mode: effectiveMode,
       totalQuestions: questions.length,
       maxScore: questions.length * quiz.correctMarks,
       timeLimit: quiz.duration * 60, // Convert to seconds
@@ -668,7 +673,7 @@ export const startQuiz = async (req: Request, res: Response) => {
         _id: attempt._id,
         quiz: {
           _id: quiz._id,
-          mode: quiz.mode,
+          mode: effectiveMode,
           duration: quiz.duration,
           correctMarks: quiz.correctMarks,
           wrongMarks: quiz.wrongMarks,

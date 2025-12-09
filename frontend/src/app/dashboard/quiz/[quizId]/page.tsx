@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeft,
@@ -127,6 +127,7 @@ export default function QuizPage() {
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [quizInfo, setQuizInfo] = useState<QuizInfo | null>(null);
   const [isLoadingInfo, setIsLoadingInfo] = useState(true);
+  const [userSelectedMode, setUserSelectedMode] = useState<'practice' | 'exam'>('practice');
 
   // Quiz state
   const [attempt, setAttempt] = useState<QuizAttempt | null>(null);
@@ -166,7 +167,11 @@ export default function QuizPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/learn/quizzes/${quizId}/start`,
         {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ mode: userSelectedMode }),
         }
       );
       const data = await res.json();
@@ -195,7 +200,7 @@ export default function QuizPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [quizId, router]);
+  }, [quizId, router, userSelectedMode]);
 
   // Fetch quiz info for start screen
   useEffect(() => {
@@ -212,6 +217,8 @@ export default function QuizPage() {
 
         if (data.success) {
           setQuizInfo(data.data);
+          // Initialize user-selected mode from quiz default
+          setUserSelectedMode(data.data.mode || 'practice');
         } else {
           // If no info endpoint, skip start screen and start quiz directly
           setShowStartScreen(false);
@@ -374,29 +381,27 @@ export default function QuizPage() {
     }
   };
 
-  // Save answer (exam mode - just saves locally)
-  const handleSaveAnswer = () => {
-    if (!attempt || !currentQuestion || !selectedOption) return;
-    setAttempt({
-      ...attempt,
-      answers: { ...attempt.answers, [currentQuestion._id]: selectedOption },
+  // Save answer (exam mode - just saves locally) using functional update to avoid stale closures
+  const handleSaveAnswer = useCallback(() => {
+    if (!selectedOption) return;
+    setAttempt((prev) => {
+      if (!prev) return prev;
+      const currentQ = prev.questions[currentQuestionIndex];
+      if (!currentQ) return prev;
+      return {
+        ...prev,
+        answers: { ...prev.answers, [currentQ._id]: selectedOption },
+      };
     });
-  };
+  }, [selectedOption, currentQuestionIndex]);
 
   // Go to next question
-  const handleNextQuestion = () => {
+  const handleNextQuestion = useCallback(() => {
     if (!attempt) return;
 
-    // Save answer in exam mode using functional update
-    if (attempt.quiz.mode === 'exam' && selectedOption && currentQuestion) {
-      setAttempt((prev) =>
-        prev
-          ? {
-              ...prev,
-              answers: { ...prev.answers, [currentQuestion._id]: selectedOption },
-            }
-          : prev
-      );
+    // Save current answer first (exam mode only - practice mode saves via API)
+    if (attempt.quiz.mode === 'exam' && selectedOption) {
+      handleSaveAnswer();
     }
 
     // Reset states
@@ -407,32 +412,30 @@ export default function QuizPage() {
     if (currentQuestionIndex < attempt.questions.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
-      // Pre-select if already answered
-      const nextQ = attempt.questions[nextIndex];
-      setSelectedOption(attempt.answers[nextQ._id] || null);
+      // Pre-select if already answered - use functional read to get latest state
+      setAttempt((prev) => {
+        if (prev) {
+          const nextQ = prev.questions[nextIndex];
+          setSelectedOption(prev.answers[nextQ._id] || null);
+        }
+        return prev;
+      });
     } else if (attempt.quiz.mode === 'practice') {
-      // Auto-submit at end of practice
-      handleSubmitQuiz();
+      // Auto-submit at end of practice - use ref to avoid dependency issues
+      handleSubmitQuizRef.current();
     } else {
       // Exam mode: stay on last question, user needs to click submit
       setSelectedOption(null);
     }
-  };
+  }, [attempt, selectedOption, currentQuestionIndex, handleSaveAnswer]);
 
   // Go to previous question
-  const handlePrevQuestion = () => {
+  const handlePrevQuestion = useCallback(() => {
     if (!attempt || currentQuestionIndex === 0) return;
 
-    // Save current answer in exam mode using functional update
-    if (attempt.quiz.mode === 'exam' && selectedOption && currentQuestion) {
-      setAttempt((prev) =>
-        prev
-          ? {
-              ...prev,
-              answers: { ...prev.answers, [currentQuestion._id]: selectedOption },
-            }
-          : prev
-      );
+    // Save current answer first (exam mode only)
+    if (attempt.quiz.mode === 'exam' && selectedOption) {
+      handleSaveAnswer();
     }
 
     setAnswerResult(null);
@@ -441,25 +444,23 @@ export default function QuizPage() {
     const prevIndex = currentQuestionIndex - 1;
     setCurrentQuestionIndex(prevIndex);
 
-    // Pre-select if already answered
-    const prevQ = attempt.questions[prevIndex];
-    setSelectedOption(attempt.answers[prevQ._id] || null);
-  };
+    // Pre-select if already answered - use functional read to get latest state
+    setAttempt((prev) => {
+      if (prev) {
+        const prevQ = prev.questions[prevIndex];
+        setSelectedOption(prev.answers[prevQ._id] || null);
+      }
+      return prev;
+    });
+  }, [attempt, currentQuestionIndex, selectedOption, handleSaveAnswer]);
 
   // Go to specific question
-  const handleGoToQuestion = (index: number) => {
+  const handleGoToQuestion = useCallback((index: number) => {
     if (!attempt) return;
 
-    // Save current answer in exam mode using functional update
-    if (attempt.quiz.mode === 'exam' && selectedOption && currentQuestion) {
-      setAttempt((prev) =>
-        prev
-          ? {
-              ...prev,
-              answers: { ...prev.answers, [currentQuestion._id]: selectedOption },
-            }
-          : prev
-      );
+    // Save current answer first (exam mode only)
+    if (attempt.quiz.mode === 'exam' && selectedOption) {
+      handleSaveAnswer();
     }
 
     setAnswerResult(null);
@@ -467,10 +468,15 @@ export default function QuizPage() {
     setCurrentQuestionIndex(index);
     setShowQuestionPalette(false);
 
-    // Pre-select if already answered
-    const targetQ = attempt.questions[index];
-    setSelectedOption(attempt.answers[targetQ._id] || null);
-  };
+    // Pre-select if already answered - use functional read to get latest state
+    setAttempt((prev) => {
+      if (prev) {
+        const targetQ = prev.questions[index];
+        setSelectedOption(prev.answers[targetQ._id] || null);
+      }
+      return prev;
+    });
+  }, [attempt, selectedOption, handleSaveAnswer]);
 
   // Toggle flag
   const toggleFlag = () => {
@@ -532,6 +538,15 @@ export default function QuizPage() {
     handleSubmitQuizRef.current = handleSubmitQuiz;
   }, [handleSubmitQuiz]);
 
+  // Use useMemo to ensure counter is always accurate and only recalculates when answers change
+  // IMPORTANT: This must be before any early returns to satisfy React's rules of hooks
+  const answeredCount = useMemo(() => {
+    if (!attempt) return 0;
+    return Object.keys(attempt.answers).filter(
+      (qId) => attempt.answers[qId] !== null && attempt.answers[qId] !== undefined && attempt.answers[qId] !== ''
+    ).length;
+  }, [attempt]);
+
   // Loading state for quiz info
   if (isLoadingInfo) {
     return (
@@ -548,6 +563,8 @@ export default function QuizPage() {
         quizInfo={quizInfo}
         language={language}
         onLanguageChange={setLanguage}
+        selectedMode={userSelectedMode}
+        onModeChange={setUserSelectedMode}
         onStart={() => startQuiz()}
         onBack={() => router.back()}
         isLoading={isLoading}
@@ -585,7 +602,6 @@ export default function QuizPage() {
   }
 
   const isPractice = attempt.quiz.mode === 'practice';
-  const answeredCount = Object.keys(attempt.answers).length;
   const progressPercent = (answeredCount / attempt.questions.length) * 100;
 
   return (
@@ -1041,6 +1057,8 @@ function QuizStartScreen({
   quizInfo,
   language,
   onLanguageChange,
+  selectedMode,
+  onModeChange,
   onStart,
   onBack,
   isLoading,
@@ -1048,11 +1066,13 @@ function QuizStartScreen({
   quizInfo: QuizInfo;
   language: 'en' | 'hi';
   onLanguageChange: (lang: 'en' | 'hi') => void;
+  selectedMode: 'practice' | 'exam';
+  onModeChange: (mode: 'practice' | 'exam') => void;
   onStart: () => void;
   onBack: () => void;
   isLoading: boolean;
 }) {
-  const isPractice = quizInfo.mode === 'practice';
+  const isPractice = selectedMode === 'practice';
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -1074,19 +1094,44 @@ function QuizStartScreen({
           </div>
 
           {/* Title */}
-          <Badge
-            variant="secondary"
-            className={cn(
-              'mb-4',
-              isPractice ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
-            )}
-          >
-            {isPractice ? 'Practice Mode' : 'Exam Mode'}
-          </Badge>
-
-          <h1 className="text-2xl font-bold text-foreground mb-2">
+          <h1 className="text-2xl font-bold text-foreground mb-4">
             {language === 'hi' && quizInfo.titleHi ? quizInfo.titleHi : quizInfo.title}
           </h1>
+
+          {/* Mode Selector */}
+          <div className="mb-6">
+            <p className="text-sm text-muted-foreground mb-3">Select quiz mode:</p>
+            <div className="flex gap-2">
+              <Button
+                variant={isPractice ? 'default' : 'outline'}
+                onClick={() => onModeChange('practice')}
+                className={cn(
+                  'flex-1 h-auto py-3',
+                  isPractice && 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                )}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Zap className="h-5 w-5" />
+                  <span className="font-medium">Practice</span>
+                  <span className="text-xs opacity-80">Learn with feedback</span>
+                </div>
+              </Button>
+              <Button
+                variant={!isPractice ? 'default' : 'outline'}
+                onClick={() => onModeChange('exam')}
+                className={cn(
+                  'flex-1 h-auto py-3',
+                  !isPractice && 'bg-blue-600 hover:bg-blue-700 text-white'
+                )}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Clock className="h-5 w-5" />
+                  <span className="font-medium">Exam</span>
+                  <span className="text-xs opacity-80">Simulate real test</span>
+                </div>
+              </Button>
+            </div>
+          </div>
 
           {/* Stats */}
           <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground my-6">
