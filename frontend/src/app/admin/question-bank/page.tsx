@@ -316,31 +316,71 @@ export default function QuestionBankPage() {
     }
   };
 
-  // Download template
-  const downloadTemplate = async () => {
+  // Download template - now returns actual file
+  const downloadTemplate = async (format: 'csv' | 'xlsx' = 'csv') => {
     try {
       const token = localStorage.getItem('accessToken');
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/question-bank/template`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/question-bank/template?format=${format}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      const data = await res.json();
 
-      if (data.success) {
-        // Create and download CSV
-        const blob = new Blob([data.data.csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'question-import-template.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
-        toast.success('Template downloaded');
+      if (!res.ok) {
+        throw new Error('Failed to download template');
       }
+
+      // Get blob from response
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `question-import-template.${format}`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Template downloaded');
     } catch {
       toast.error('Failed to download template');
+    }
+  };
+
+  // Export questions
+  const exportQuestions = async (format: 'csv' | 'xlsx' = 'csv') => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/question-bank/export`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            format,
+            // Apply current filters to export
+            ...(filterSubject !== 'all' && { subject: filterSubject }),
+            ...(filterDifficulty !== 'all' && { difficulty: filterDifficulty }),
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error('Failed to export questions');
+      }
+
+      const blob = await res.blob();
+      const timestamp = new Date().toISOString().split('T')[0];
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `questions-export-${timestamp}.${format}`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Questions exported successfully');
+    } catch {
+      toast.error('Failed to export questions');
     }
   };
 
@@ -368,6 +408,31 @@ export default function QuestionBankPage() {
           <p className="text-muted-foreground">Manage quiz questions across all courses</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-border text-foreground">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-card border-border">
+              <DropdownMenuItem
+                onClick={() => exportQuestions('csv')}
+                className="text-foreground"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => exportQuestions('xlsx')}
+                className="text-foreground"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="outline"
             onClick={() => setBulkImportSheet(true)}
@@ -707,7 +772,7 @@ export default function QuestionBankPage() {
           <SheetHeader>
             <SheetTitle className="text-foreground">Bulk Import Questions</SheetTitle>
             <SheetDescription className="text-muted-foreground">
-              Import multiple questions from a CSV file
+              Import multiple questions from CSV or Excel file
             </SheetDescription>
           </SheetHeader>
           <BulkImportForm
@@ -716,7 +781,7 @@ export default function QuestionBankPage() {
               fetchQuestions();
               fetchStats();
             }}
-            onDownloadTemplate={downloadTemplate}
+            onDownloadTemplate={(format) => downloadTemplate(format)}
           />
         </SheetContent>
       </Sheet>
@@ -1131,7 +1196,7 @@ function BulkImportForm({
   onDownloadTemplate,
 }: {
   onSuccess: () => void;
-  onDownloadTemplate: () => void;
+  onDownloadTemplate: (format: 'csv' | 'xlsx') => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -1184,36 +1249,58 @@ function BulkImportForm({
     }
   };
 
+  const getFileIcon = () => {
+    if (!file) return null;
+    const ext = file.name.toLowerCase().split('.').pop();
+    if (ext === 'xlsx' || ext === 'xls') {
+      return <FileText className="h-8 w-8 text-emerald-600" />;
+    }
+    return <FileText className="h-8 w-8 text-muted-foreground" />;
+  };
+
   return (
     <div className="mt-6 space-y-6">
       {/* Instructions */}
       <div className="space-y-2">
         <h4 className="font-medium text-foreground">Instructions</h4>
         <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Download the template CSV file</li>
+          <li>Download the template (CSV or Excel format)</li>
           <li>Fill in your questions following the format</li>
-          <li>Upload the completed CSV file</li>
+          <li>Upload the completed file</li>
           <li>Review any errors and fix them</li>
         </ul>
       </div>
 
-      {/* Download Template */}
-      <Button
-        variant="outline"
-        onClick={onDownloadTemplate}
-        className="w-full border-border text-foreground"
-      >
-        <Download className="mr-2 h-4 w-4" />
-        Download Template
-      </Button>
+      {/* Download Template Options */}
+      <div className="space-y-2">
+        <Label className="text-foreground">Download Template</Label>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onDownloadTemplate('csv')}
+            className="flex-1 border-border text-foreground"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            CSV Template
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onDownloadTemplate('xlsx')}
+            className="flex-1 border-border text-foreground"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Excel Template
+          </Button>
+        </div>
+      </div>
 
       {/* File Upload */}
       <div className="space-y-2">
-        <Label className="text-foreground">Upload CSV File</Label>
-        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+        <Label className="text-foreground">Upload File</Label>
+        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center relative">
           {file ? (
             <div className="flex items-center justify-center gap-3">
-              <FileText className="h-8 w-8 text-muted-foreground" />
+              {getFileIcon()}
               <div className="text-left">
                 <p className="text-foreground font-medium">{file.name}</p>
                 <p className="text-sm text-muted-foreground">
@@ -1235,12 +1322,12 @@ function BulkImportForm({
               <p className="text-muted-foreground text-sm">
                 Click to upload or drag and drop
               </p>
-              <p className="text-muted-foreground text-xs mt-1">CSV files only</p>
+              <p className="text-muted-foreground text-xs mt-1">CSV or Excel files (.csv, .xlsx, .xls)</p>
             </>
           )}
           <input
             type="file"
-            accept=".csv"
+            accept=".csv,.xlsx,.xls"
             onChange={handleFileChange}
             className={cn(
               'absolute inset-0 opacity-0 cursor-pointer',

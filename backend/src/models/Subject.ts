@@ -57,7 +57,7 @@ const subjectSchema = new Schema<ISubject>(
     }],
     isPublished: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     totalChapters: {
       type: Number,

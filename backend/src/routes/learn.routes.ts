@@ -6,6 +6,7 @@ import {
   getLessonContent,
   markLessonComplete,
   getCourseProgress,
+  getQuizInfo,
   startQuiz,
   submitAnswer,
   submitQuiz,
@@ -42,6 +43,9 @@ router.get('/lessons/:lessonId', authenticate, getLessonContent);
 router.post('/lessons/:lessonId/complete', authenticate, markLessonComplete);
 
 // ==================== QUIZZES ====================
+
+// GET /api/learn/quizzes/:quizId/info - Get quiz info for start screen
+router.get('/quizzes/:quizId/info', authenticate, getQuizInfo);
 
 // POST /api/learn/quizzes/:quizId/start - Start quiz attempt
 router.post('/quizzes/:quizId/start', authenticate, startQuiz);

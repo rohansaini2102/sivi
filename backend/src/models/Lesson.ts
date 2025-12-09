@@ -77,7 +77,7 @@ const lessonSchema = new Schema<ILesson>(
     },
     isPublished: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     // Notes content
     content: String,

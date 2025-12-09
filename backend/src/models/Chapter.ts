@@ -63,7 +63,7 @@ const chapterSchema = new Schema<IChapter>(
     },
     isPublished: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     totalLessons: {
       type: Number,

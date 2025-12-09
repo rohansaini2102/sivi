@@ -8,6 +8,7 @@ import {
   Facebook, Twitter, Instagram, Youtube, Linkedin,
   Mail, Phone, MapPin, ChevronRight
 } from 'lucide-react';
+import { useRive } from '@rive-app/react-canvas';
 
 const Footer: React.FC = () => {
   const quickLinks = [
@@ -50,6 +51,11 @@ const Footer: React.FC = () => {
     { icon: Youtube, href: '#', label: 'YouTube' },
     { icon: Linkedin, href: '#', label: 'LinkedIn' },
   ];
+
+  const { RiveComponent } = useRive({
+    src: '/animations/hero-ui-animation.riv',
+    autoplay: true,
+  });
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -219,6 +225,15 @@ const Footer: React.FC = () => {
               </div>
             </div>
           </motion.div>
+        </div>
+      </div>
+
+      {/* Rive Animation */}
+      <div className="border-t border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="h-[200px] w-full">
+            <RiveComponent />
+          </div>
         </div>
       </div>
 

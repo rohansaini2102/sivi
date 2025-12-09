@@ -1,6 +1,65 @@
 import { Request, Response } from 'express';
 import Question from '../models/Question';
 import logger from '../utils/logger';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+
+// Helper: Transform question from DB format to frontend format
+const transformQuestionForFrontend = (q: any) => {
+  if (!q) return q;
+
+  // Convert options object to array format
+  const optionsArray = [
+    { id: 'a', text: q.options?.a || '', textHi: q.optionsHindi?.a || '' },
+    { id: 'b', text: q.options?.b || '', textHi: q.optionsHindi?.b || '' },
+    { id: 'c', text: q.options?.c || '', textHi: q.optionsHindi?.c || '' },
+    { id: 'd', text: q.options?.d || '', textHi: q.optionsHindi?.d || '' },
+  ];
+
+  return {
+    _id: q._id,
+    question: q.question,
+    questionHi: q.questionHindi,
+    options: optionsArray,
+    correctOption: q.correctAnswer, // Map field name for frontend
+    explanation: q.explanation,
+    explanationHi: q.explanationHindi,
+    difficulty: q.difficulty,
+    subject: q.subject,
+    topic: q.topic,
+    tags: q.tags || [],
+    source: q.source,
+    year: q.year,
+    examCategory: q.examCategory,
+    isActive: q.isActive,
+    usageCount: q.timesAnswered || 0, // Map field name for frontend
+    correctCount: q.timesCorrect || 0,
+    incorrectCount: (q.timesAnswered || 0) - (q.timesCorrect || 0),
+    usedInQuizzes: q.usedInQuizzes,
+    usedInExams: q.usedInExams,
+    createdAt: q.createdAt,
+    updatedAt: q.updatedAt,
+  };
+};
+
+// Helper: Transform frontend format to DB format
+const transformOptionsToDb = (options: any[]) => {
+  if (!options || !Array.isArray(options)) return null;
+
+  const optionsObj: any = {};
+  const optionsHindiObj: any = {};
+
+  options.forEach((opt) => {
+    if (opt.id && ['a', 'b', 'c', 'd'].includes(opt.id)) {
+      optionsObj[opt.id] = opt.text || '';
+      if (opt.textHi) {
+        optionsHindiObj[opt.id] = opt.textHi;
+      }
+    }
+  });
+
+  return { options: optionsObj, optionsHindi: optionsHindiObj };
+};
 
 // List questions with filters
 export const listQuestions = async (req: Request, res: Response) => {
@@ -79,10 +138,13 @@ export const listQuestions = async (req: Request, res: Response) => {
       .select('-createdBy')
       .lean();
 
+    // Transform questions to frontend format
+    const transformedQuestions = questions.map(transformQuestionForFrontend);
+
     res.json({
       success: true,
       data: {
-        questions,
+        questions: transformedQuestions,
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -117,9 +179,10 @@ export const getQuestion = async (req: Request, res: Response) => {
       });
     }
 
+    // Transform to frontend format
     res.json({
       success: true,
-      data: question,
+      data: transformQuestionForFrontend(question),
     });
   } catch (error: any) {
     logger.error('Get question error:', error);
@@ -135,11 +198,13 @@ export const createQuestion = async (req: Request, res: Response) => {
   try {
     const {
       question: questionText,
-      questionHindi,
-      options,
-      optionsHindi,
-      correctAnswer,
+      questionHi, // Frontend sends questionHi
+      questionHindi, // Also accept questionHindi for backward compatibility
+      options, // Frontend sends array format
+      correctOption, // Frontend sends correctOption
+      correctAnswer, // Also accept correctAnswer for backward compatibility
       explanation,
+      explanationHi,
       explanationHindi,
       difficulty,
       subject,
@@ -150,16 +215,28 @@ export const createQuestion = async (req: Request, res: Response) => {
       examCategory,
     } = req.body;
 
+    // Transform options from array to object format if needed
+    let optionsObj = options;
+    let optionsHindiObj = null;
+
+    if (Array.isArray(options)) {
+      const transformed = transformOptionsToDb(options);
+      if (transformed) {
+        optionsObj = transformed.options;
+        optionsHindiObj = transformed.optionsHindi;
+      }
+    }
+
     const question = new Question({
       question: questionText,
-      questionHindi,
-      options,
-      optionsHindi,
-      correctAnswer,
+      questionHindi: questionHi || questionHindi,
+      options: optionsObj,
+      optionsHindi: optionsHindiObj,
+      correctAnswer: correctOption || correctAnswer, // Accept both field names
       explanation,
-      explanationHindi,
+      explanationHindi: explanationHi || explanationHindi,
       difficulty: difficulty || 'medium',
-      subject,
+      subject: subject || 'General',
       topic,
       tags: tags || [],
       source,
@@ -172,9 +249,10 @@ export const createQuestion = async (req: Request, res: Response) => {
 
     logger.info(`Question created: ${question._id}`);
 
+    // Return transformed format for frontend
     res.status(201).json({
       success: true,
-      data: question,
+      data: transformQuestionForFrontend(question.toObject()),
       message: 'Question created successfully',
     });
   } catch (error: any) {
@@ -192,11 +270,13 @@ export const updateQuestion = async (req: Request, res: Response) => {
     const { questionId } = req.params;
     const {
       question: questionText,
+      questionHi,
       questionHindi,
       options,
-      optionsHindi,
+      correctOption,
       correctAnswer,
       explanation,
+      explanationHi,
       explanationHindi,
       difficulty,
       subject,
@@ -208,27 +288,41 @@ export const updateQuestion = async (req: Request, res: Response) => {
       isActive,
     } = req.body;
 
+    // Transform options from array to object format if needed
+    let optionsObj = options;
+    let optionsHindiObj = undefined;
+
+    if (Array.isArray(options)) {
+      const transformed = transformOptionsToDb(options);
+      if (transformed) {
+        optionsObj = transformed.options;
+        optionsHindiObj = transformed.optionsHindi;
+      }
+    }
+
+    const updateData: any = {
+      ...(questionText && { question: questionText }),
+      ...((questionHi || questionHindi) && { questionHindi: questionHi || questionHindi }),
+      ...(optionsObj && { options: optionsObj }),
+      ...(optionsHindiObj && { optionsHindi: optionsHindiObj }),
+      ...((correctOption || correctAnswer) && { correctAnswer: correctOption || correctAnswer }),
+      ...(explanation && { explanation }),
+      ...((explanationHi || explanationHindi) && { explanationHindi: explanationHi || explanationHindi }),
+      ...(difficulty && { difficulty }),
+      ...(subject && { subject }),
+      ...(topic !== undefined && { topic }),
+      ...(tags && { tags }),
+      ...(source !== undefined && { source }),
+      ...(year !== undefined && { year }),
+      ...(examCategory && { examCategory }),
+      ...(typeof isActive === 'boolean' && { isActive }),
+    };
+
     const question = await Question.findByIdAndUpdate(
       questionId,
-      {
-        question: questionText,
-        questionHindi,
-        options,
-        optionsHindi,
-        correctAnswer,
-        explanation,
-        explanationHindi,
-        difficulty,
-        subject,
-        topic,
-        tags,
-        source,
-        year,
-        examCategory,
-        ...(typeof isActive === 'boolean' && { isActive }),
-      },
+      updateData,
       { new: true }
-    );
+    ).lean();
 
     if (!question) {
       return res.status(404).json({
@@ -239,9 +333,10 @@ export const updateQuestion = async (req: Request, res: Response) => {
 
     logger.info(`Question updated: ${questionId}`);
 
+    // Return transformed format for frontend
     res.json({
       success: true,
-      data: question,
+      data: transformQuestionForFrontend(question),
       message: 'Question updated successfully',
     });
   } catch (error: any) {
@@ -354,73 +449,136 @@ export const duplicateQuestion = async (req: Request, res: Response) => {
   }
 };
 
-// Bulk import questions
+// Bulk import questions (supports CSV, Excel files via multer)
 export const bulkImportQuestions = async (req: Request, res: Response) => {
   try {
-    const { questions, examCategory } = req.body;
+    const file = (req as any).file;
+    const { examCategory } = req.body;
 
-    if (!Array.isArray(questions) || questions.length === 0) {
+    let questions: any[] = [];
+
+    // If file is uploaded, parse it
+    if (file) {
+      const fileName = file.originalname.toLowerCase();
+
+      if (fileName.endsWith('.csv')) {
+        // Parse CSV
+        const csvContent = file.buffer.toString('utf-8');
+        const parseResult = Papa.parse(csvContent, {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: (h: string) => h.trim(),
+        });
+        questions = parseResult.data as any[];
+      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        // Parse Excel
+        const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        questions = XLSX.utils.sheet_to_json(sheet);
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'Unsupported file format. Use CSV or Excel (.xlsx, .xls)', code: 'INVALID_FILE_TYPE' },
+        });
+      }
+    } else if (req.body.questions && Array.isArray(req.body.questions)) {
+      // Accept JSON array directly (backward compatibility)
+      questions = req.body.questions;
+    } else {
       return res.status(400).json({
         success: false,
-        error: { message: 'Questions array required', code: 'INVALID_INPUT' },
+        error: { message: 'No file uploaded or questions array provided', code: 'INVALID_INPUT' },
+      });
+    }
+
+    if (questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'No questions found in the file', code: 'EMPTY_FILE' },
       });
     }
 
     const results = {
       success: 0,
       failed: 0,
-      errors: [] as { index: number; error: string }[],
+      errors: [] as string[],
     };
 
     for (let i = 0; i < questions.length; i++) {
       try {
-        const q = questions[i];
+        const row = questions[i];
+
+        // Map CSV/Excel columns to question format
+        const questionText = row.question || row.Question;
+        const questionHindi = row.questionHi || row.questionHindi || row.QuestionHindi;
+        const correctAnswer = (row.correctAnswer || row.CorrectAnswer || row.correct_answer || '').toLowerCase();
+        const subject = row.subject || row.Subject || 'General';
+
+        // Get options - support both formats
+        let options: any;
+        let optionsHindi: any;
+
+        if (row.optionA || row.OptionA) {
+          // CSV format with optionA, optionB, etc.
+          options = {
+            a: row.optionA || row.OptionA || '',
+            b: row.optionB || row.OptionB || '',
+            c: row.optionC || row.OptionC || '',
+            d: row.optionD || row.OptionD || '',
+          };
+          optionsHindi = {
+            a: row.optionAHi || row.optionAHindi || row.OptionAHindi || '',
+            b: row.optionBHi || row.optionBHindi || row.OptionBHindi || '',
+            c: row.optionCHi || row.optionCHindi || row.OptionCHindi || '',
+            d: row.optionDHi || row.optionDHindi || row.OptionDHindi || '',
+          };
+        } else if (row.options) {
+          // Already in object format
+          options = row.options;
+          optionsHindi = row.optionsHindi;
+        }
 
         // Validate required fields
-        if (!q.question || !q.options || !q.correctAnswer || !q.subject) {
+        if (!questionText) {
           results.failed++;
-          results.errors.push({
-            index: i,
-            error: 'Missing required fields (question, options, correctAnswer, subject)',
-          });
+          results.errors.push(`Row ${i + 2}: Missing question text`);
           continue;
         }
 
-        // Validate options
-        if (!q.options.a || !q.options.b || !q.options.c || !q.options.d) {
+        if (!options?.a || !options?.b || !options?.c || !options?.d) {
           results.failed++;
-          results.errors.push({
-            index: i,
-            error: 'All four options (a, b, c, d) are required',
-          });
+          results.errors.push(`Row ${i + 2}: Missing options (a, b, c, d required)`);
           continue;
         }
 
-        // Validate correct answer
-        if (!['a', 'b', 'c', 'd'].includes(q.correctAnswer)) {
+        if (!['a', 'b', 'c', 'd'].includes(correctAnswer)) {
           results.failed++;
-          results.errors.push({
-            index: i,
-            error: 'Correct answer must be a, b, c, or d',
-          });
+          results.errors.push(`Row ${i + 2}: Invalid correct answer "${correctAnswer}" (must be a, b, c, or d)`);
           continue;
         }
+
+        // Parse tags
+        const tagsRaw = row.tags || row.Tags || '';
+        const tags = typeof tagsRaw === 'string'
+          ? tagsRaw.split(',').map((t: string) => t.trim()).filter(Boolean)
+          : (Array.isArray(tagsRaw) ? tagsRaw : []);
 
         const question = new Question({
-          question: q.question,
-          questionHindi: q.questionHindi,
-          options: q.options,
-          optionsHindi: q.optionsHindi,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-          explanationHindi: q.explanationHindi,
-          difficulty: q.difficulty || 'medium',
-          subject: q.subject,
-          topic: q.topic,
-          tags: q.tags || [],
-          source: q.source,
-          year: q.year,
-          examCategory: q.examCategory || examCategory || 'OTHER',
+          question: questionText,
+          questionHindi,
+          options,
+          optionsHindi: optionsHindi?.a ? optionsHindi : undefined,
+          correctAnswer,
+          explanation: row.explanation || row.Explanation,
+          explanationHindi: row.explanationHi || row.explanationHindi || row.ExplanationHindi,
+          difficulty: (row.difficulty || row.Difficulty || 'medium').toLowerCase(),
+          subject,
+          topic: row.topic || row.Topic,
+          tags,
+          source: row.source || row.Source,
+          year: row.year || row.Year ? parseInt(row.year || row.Year) : undefined,
+          examCategory: row.examCategory || examCategory || 'OTHER',
           createdBy: req.user!.userId,
         });
 
@@ -428,10 +586,7 @@ export const bulkImportQuestions = async (req: Request, res: Response) => {
         results.success++;
       } catch (error: any) {
         results.failed++;
-        results.errors.push({
-          index: i,
-          error: error.message,
-        });
+        results.errors.push(`Row ${i + 2}: ${error.message}`);
       }
     }
 
@@ -451,32 +606,35 @@ export const bulkImportQuestions = async (req: Request, res: Response) => {
   }
 };
 
-// Get import template
-export const getImportTemplate = async (_req: Request, res: Response) => {
+// Get import template - returns actual CSV file download
+export const getImportTemplate = async (req: Request, res: Response) => {
   try {
-    const template = {
-      columns: [
-        'question',
-        'questionHindi',
-        'optionA',
-        'optionAHindi',
-        'optionB',
-        'optionBHindi',
-        'optionC',
-        'optionCHindi',
-        'optionD',
-        'optionDHindi',
-        'correctAnswer',
-        'explanation',
-        'explanationHindi',
-        'difficulty',
-        'subject',
-        'topic',
-        'tags',
-        'source',
-        'year',
-      ],
-      example: {
+    const format = (req.query.format as string) || 'csv';
+
+    const headers = [
+      'question',
+      'questionHindi',
+      'optionA',
+      'optionAHindi',
+      'optionB',
+      'optionBHindi',
+      'optionC',
+      'optionCHindi',
+      'optionD',
+      'optionDHindi',
+      'correctAnswer',
+      'explanation',
+      'explanationHindi',
+      'difficulty',
+      'subject',
+      'topic',
+      'tags',
+      'source',
+      'year',
+    ];
+
+    const sampleRows = [
+      {
         question: 'What is the capital of India?',
         questionHindi: 'भारत की राजधानी क्या है?',
         optionA: 'Mumbai',
@@ -497,24 +655,147 @@ export const getImportTemplate = async (_req: Request, res: Response) => {
         source: 'General Knowledge',
         year: '2024',
       },
-      notes: [
-        'correctAnswer must be a, b, c, or d (lowercase)',
-        'difficulty must be easy, medium, or hard',
-        'tags should be comma-separated',
-        'Hindi fields are optional',
-        'All option fields (A, B, C, D) are required',
-      ],
-    };
+      {
+        question: 'Which planet is known as the Red Planet?',
+        questionHindi: 'कौन सा ग्रह लाल ग्रह के रूप में जाना जाता है?',
+        optionA: 'Venus',
+        optionAHindi: 'शुक्र',
+        optionB: 'Jupiter',
+        optionBHindi: 'बृहस्पति',
+        optionC: 'Mars',
+        optionCHindi: 'मंगल',
+        optionD: 'Saturn',
+        optionDHindi: 'शनि',
+        correctAnswer: 'c',
+        explanation: 'Mars is called the Red Planet due to iron oxide on its surface.',
+        explanationHindi: 'मंगल ग्रह को इसकी सतह पर आयरन ऑक्साइड के कारण लाल ग्रह कहा जाता है।',
+        difficulty: 'medium',
+        subject: 'Science',
+        topic: 'Solar System',
+        tags: 'planets,mars,space',
+        source: 'Science Textbook',
+        year: '2024',
+      },
+    ];
 
-    res.json({
-      success: true,
-      data: template,
-    });
+    if (format === 'xlsx') {
+      // Generate Excel file
+      const ws = XLSX.utils.json_to_sheet(sampleRows, { header: headers });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Questions Template');
+
+      // Add a notes sheet
+      const notesData = [
+        { Field: 'correctAnswer', Note: 'Must be a, b, c, or d (lowercase)' },
+        { Field: 'difficulty', Note: 'Must be easy, medium, or hard' },
+        { Field: 'tags', Note: 'Comma-separated values (e.g., "tag1,tag2,tag3")' },
+        { Field: 'Hindi fields', Note: 'All Hindi fields are optional' },
+        { Field: 'Options', Note: 'All four options (A, B, C, D) are required' },
+      ];
+      const notesSheet = XLSX.utils.json_to_sheet(notesData);
+      XLSX.utils.book_append_sheet(wb, notesSheet, 'Instructions');
+
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=question-import-template.xlsx');
+      res.send(buffer);
+    } else {
+      // Generate CSV file
+      const csv = Papa.unparse(sampleRows, { columns: headers });
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=question-import-template.csv');
+      // Add BOM for Excel to recognize UTF-8
+      res.send('\ufeff' + csv);
+    }
   } catch (error: any) {
     logger.error('Get template error:', error);
     res.status(400).json({
       success: false,
       error: { message: error.message, code: 'GET_TEMPLATE_ERROR' },
+    });
+  }
+};
+
+// Export questions to CSV or Excel
+export const exportQuestions = async (req: Request, res: Response) => {
+  try {
+    const { format = 'csv', questionIds, subject, difficulty, examCategory } = req.body;
+
+    // Build query based on filters or specific IDs
+    const query: any = {};
+
+    if (questionIds && Array.isArray(questionIds) && questionIds.length > 0) {
+      query._id = { $in: questionIds };
+    } else {
+      // Apply filters if no specific IDs provided
+      if (subject) query.subject = subject;
+      if (difficulty) query.difficulty = difficulty;
+      if (examCategory) query.examCategory = examCategory;
+    }
+
+    const questions = await Question.find(query).lean();
+
+    if (questions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'No questions found to export', code: 'NO_QUESTIONS' },
+      });
+    }
+
+    // Transform questions to export format
+    const exportRows = questions.map((q: any) => ({
+      question: q.question,
+      questionHindi: q.questionHindi || '',
+      optionA: q.options?.a || '',
+      optionAHindi: q.optionsHindi?.a || '',
+      optionB: q.options?.b || '',
+      optionBHindi: q.optionsHindi?.b || '',
+      optionC: q.options?.c || '',
+      optionCHindi: q.optionsHindi?.c || '',
+      optionD: q.options?.d || '',
+      optionDHindi: q.optionsHindi?.d || '',
+      correctAnswer: q.correctAnswer,
+      explanation: q.explanation || '',
+      explanationHindi: q.explanationHindi || '',
+      difficulty: q.difficulty || 'medium',
+      subject: q.subject || '',
+      topic: q.topic || '',
+      tags: Array.isArray(q.tags) ? q.tags.join(',') : '',
+      source: q.source || '',
+      year: q.year || '',
+    }));
+
+    const timestamp = new Date().toISOString().split('T')[0];
+
+    if (format === 'xlsx') {
+      // Generate Excel file
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=questions-export-${timestamp}.xlsx`);
+      res.send(buffer);
+    } else {
+      // Generate CSV file
+      const csv = Papa.unparse(exportRows);
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename=questions-export-${timestamp}.csv`);
+      // Add BOM for Excel to recognize UTF-8
+      res.send('\ufeff' + csv);
+    }
+
+    logger.info(`Exported ${questions.length} questions as ${format}`);
+  } catch (error: any) {
+    logger.error('Export questions error:', error);
+    res.status(400).json({
+      success: false,
+      error: { message: error.message, code: 'EXPORT_ERROR' },
     });
   }
 };
@@ -582,5 +863,6 @@ export default {
   duplicateQuestion,
   bulkImportQuestions,
   getImportTemplate,
+  exportQuestions,
   getQuestionStats,
 };

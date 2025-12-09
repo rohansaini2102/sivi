@@ -10,6 +10,7 @@ import {
   PlayCircle,
   BookOpen,
   Check,
+  CheckCircle2,
   Globe,
   Award,
   ChevronDown,
@@ -26,7 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import Header from '@/components/Header';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
-import { paymentApi } from '@/lib/api';
+import { paymentApi, learnApi } from '@/lib/api';
 
 interface Subject {
   _id: string;
@@ -84,10 +85,21 @@ export default function CourseDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<string[]>([]);
+  const [enrollmentStatus, setEnrollmentStatus] = useState<{
+    isEnrolled: boolean;
+    enrollment: any | null;
+  } | null>(null);
+  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
 
   useEffect(() => {
     fetchCourse();
   }, [params.slug]);
+
+  useEffect(() => {
+    if (course && isAuthenticated) {
+      checkEnrollment();
+    }
+  }, [course, isAuthenticated]);
 
   const fetchCourse = async () => {
     // Validate slug parameter before making API call
@@ -119,6 +131,22 @@ export default function CourseDetailPage() {
       router.push('/courses');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkEnrollment = async () => {
+    if (!course || !isAuthenticated) return;
+    setCheckingEnrollment(true);
+    try {
+      const { data } = await learnApi.checkEnrollment('course', course._id);
+      setEnrollmentStatus({
+        isEnrolled: data.data.isEnrolled,
+        enrollment: data.data.enrollment || null,
+      });
+    } catch (error) {
+      console.error('Error checking enrollment:', error);
+    } finally {
+      setCheckingEnrollment(false);
     }
   };
 
@@ -368,19 +396,30 @@ export default function CourseDetailPage() {
                   </div>
 
                   {/* CTA */}
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handleBuyNow}
-                    disabled={isPurchasing}
-                  >
-                    {isPurchasing ? (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      <ShoppingCart className="mr-2 h-5 w-5" />
-                    )}
-                    {course.isFree ? 'Enroll Now' : 'Buy Now'}
-                  </Button>
+                  {enrollmentStatus?.isEnrolled ? (
+                    <Button
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
+                      size="lg"
+                      onClick={() => router.push('/dashboard/courses')}
+                    >
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Go to My Courses
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleBuyNow}
+                      disabled={isPurchasing || checkingEnrollment}
+                    >
+                      {isPurchasing || checkingEnrollment ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      ) : (
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                      )}
+                      {course.isFree ? 'Enroll Now' : 'Buy Now'}
+                    </Button>
+                  )}
 
                   <Separator className="my-4" />
 
@@ -426,12 +465,23 @@ export default function CourseDetailPage() {
               </div>
             )}
           </div>
-          <Button size="lg" onClick={handleBuyNow} disabled={isPurchasing}>
-            {isPurchasing ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : null}
-            {course.isFree ? 'Enroll Now' : 'Buy Now'}
-          </Button>
+          {enrollmentStatus?.isEnrolled ? (
+            <Button
+              size="lg"
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => router.push('/dashboard/courses')}
+            >
+              <CheckCircle2 className="mr-2 h-5 w-5" />
+              Go to My Courses
+            </Button>
+          ) : (
+            <Button size="lg" onClick={handleBuyNow} disabled={isPurchasing || checkingEnrollment}>
+              {isPurchasing || checkingEnrollment ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : null}
+              {course.isFree ? 'Enroll Now' : 'Buy Now'}
+            </Button>
+          )}
         </div>
       </div>
 

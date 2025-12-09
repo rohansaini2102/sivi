@@ -470,6 +470,48 @@ export const getCourseProgress = async (req: Request, res: Response) => {
 // ==================== QUIZ ====================
 
 /**
+ * Get quiz info for start screen
+ * GET /api/learn/quizzes/:quizId/info
+ */
+export const getQuizInfo = async (req: Request, res: Response) => {
+  try {
+    const { quizId } = req.params;
+
+    const quiz = await Quiz.findById(quizId)
+      .select('title titleHi mode totalQuestions duration passingPercentage correctMarks wrongMarks')
+      .lean();
+
+    if (!quiz) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Quiz not found', code: 'QUIZ_NOT_FOUND' },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        _id: quiz._id,
+        title: quiz.title,
+        titleHi: quiz.titleHi,
+        mode: quiz.mode,
+        totalQuestions: quiz.totalQuestions,
+        duration: quiz.duration,
+        passingPercentage: quiz.passingPercentage,
+        correctMarks: quiz.correctMarks,
+        wrongMarks: quiz.wrongMarks,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Get quiz info error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: error.message, code: 'GET_QUIZ_INFO_ERROR' },
+    });
+  }
+};
+
+/**
  * Start quiz attempt
  * POST /api/learn/quizzes/:quizId/start
  */
@@ -495,22 +537,58 @@ export const startQuiz = async (req: Request, res: Response) => {
     });
 
     if (existingAttempt) {
-      // Return existing attempt
-      const questions = await Question.find({ _id: { $in: quiz.questions } })
-        .select(language === 'hi'
-          ? 'questionHindi optionsHindi difficulty'
-          : 'question options difficulty'
-        )
-        .lean();
+      // Return existing attempt in the same format as new attempt
+      const questions = await Question.find({ _id: { $in: quiz.questions } }).lean();
+
+      // Transform questions to array format (same as new attempt)
+      const questionsForUser = questions.map((q: any) => {
+        const optionsArray = [
+          { id: 'a', text: q.options.a, textHi: q.optionsHindi?.a },
+          { id: 'b', text: q.options.b, textHi: q.optionsHindi?.b },
+          { id: 'c', text: q.options.c, textHi: q.optionsHindi?.c },
+          { id: 'd', text: q.options.d, textHi: q.optionsHindi?.d },
+        ];
+
+        return {
+          _id: q._id,
+          question: q.question,
+          questionHi: q.questionHindi,
+          options: optionsArray,
+          explanation: q.explanation,
+          explanationHi: q.explanationHindi,
+        };
+      });
+
+      // Convert answers array to object format { questionId: selectedOption }
+      const answersObj: Record<string, string> = {};
+      existingAttempt.answers.forEach((a: any) => {
+        if (a.selectedOption) {
+          answersObj[a.questionId.toString()] = a.selectedOption;
+        }
+      });
 
       return res.json({
         success: true,
         data: {
-          attempt: existingAttempt,
-          questions: quiz.shuffleQuestions
-            ? shuffleArray(questions)
-            : questions,
-          resuming: true,
+          _id: existingAttempt._id,
+          quiz: {
+            _id: quiz._id,
+            mode: quiz.mode,
+            duration: quiz.duration,
+            correctMarks: quiz.correctMarks,
+            wrongMarks: quiz.wrongMarks,
+            passingPercentage: quiz.passingPercentage,
+            showExplanationAfterEach: quiz.showExplanationAfterEach,
+          },
+          questions: quiz.shuffleQuestions ? shuffleArray(questionsForUser) : questionsForUser,
+          answers: answersObj,
+          startedAt: existingAttempt.startedAt,
+          status: existingAttempt.status,
+          currentStreak: existingAttempt.currentStreak,
+          bestStreak: existingAttempt.maxStreak,
+          totalPoints: existingAttempt.totalPoints,
+          correctCount: existingAttempt.correct,
+          incorrectCount: existingAttempt.wrong,
         },
       });
     }
@@ -561,36 +639,46 @@ export const startQuiz = async (req: Request, res: Response) => {
 
     await attempt.save();
 
-    // Format questions for response (hide correct answer)
-    const questionsForUser = questions.map((q) => {
-      const formatted: any = {
+    // Format questions for response - transform to array format for frontend
+    const questionsForUser = questions.map((q: any) => {
+      // Transform options object to array format
+      const optionsArray = [
+        { id: 'a', text: q.options.a, textHi: q.optionsHindi?.a },
+        { id: 'b', text: q.options.b, textHi: q.optionsHindi?.b },
+        { id: 'c', text: q.options.c, textHi: q.optionsHindi?.c },
+        { id: 'd', text: q.options.d, textHi: q.optionsHindi?.d },
+      ];
+
+      return {
         _id: q._id,
-        question: language === 'hi' && q.questionHindi ? q.questionHindi : q.question,
-        options: language === 'hi' && q.optionsHindi ? q.optionsHindi : q.options,
-        difficulty: q.difficulty,
+        question: q.question,
+        questionHi: q.questionHindi,
+        options: optionsArray,
+        explanation: q.explanation,
+        explanationHi: q.explanationHindi,
       };
-
-      // Shuffle options if enabled
-      if (quiz.shuffleOptions) {
-        // Note: In real implementation, track the shuffle mapping
-        // For now, just return as-is
-      }
-
-      return formatted;
     });
 
     logger.info(`Quiz attempt started: ${attempt._id} by user ${userId}`);
 
+    // Return format matching frontend interface
     res.json({
       success: true,
       data: {
-        attempt: {
-          _id: attempt._id,
-          totalQuestions: attempt.totalQuestions,
-          timeLimit: attempt.timeLimit,
-          mode: attempt.mode,
+        _id: attempt._id,
+        quiz: {
+          _id: quiz._id,
+          mode: quiz.mode,
+          duration: quiz.duration,
+          correctMarks: quiz.correctMarks,
+          wrongMarks: quiz.wrongMarks,
+          passingPercentage: quiz.passingPercentage,
+          showExplanationAfterEach: quiz.showExplanationAfterEach,
         },
         questions: questionsForUser,
+        answers: {}, // Empty object - frontend tracks locally
+        startedAt: attempt.startedAt,
+        status: 'in_progress',
       },
     });
   } catch (error: any) {
@@ -609,7 +697,8 @@ export const startQuiz = async (req: Request, res: Response) => {
 export const submitAnswer = async (req: Request, res: Response) => {
   try {
     const { attemptId } = req.params;
-    const { questionIndex, selectedOption, timeTaken } = req.body;
+    // Accept questionId from frontend (not questionIndex)
+    const { questionId, selectedOption, timeTaken } = req.body;
     const userId = req.user!.userId;
 
     const attempt = await QuizAttempt.findOne({ _id: attemptId, user: userId });
@@ -634,16 +723,19 @@ export const submitAnswer = async (req: Request, res: Response) => {
       });
     }
 
-    // Get question and check answer
-    const answer = attempt.answers[questionIndex];
-    if (!answer) {
+    // Find answer by questionId (not by index)
+    const answerIndex = attempt.answers.findIndex(
+      (a) => a.questionId.toString() === questionId
+    );
+
+    if (answerIndex === -1) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Invalid question index', code: 'INVALID_INDEX' },
+        error: { message: 'Invalid question ID', code: 'INVALID_QUESTION' },
       });
     }
 
-    const question = await Question.findById(answer.questionId);
+    const question = await Question.findById(questionId);
     if (!question) {
       return res.status(404).json({
         success: false,
@@ -654,9 +746,13 @@ export const submitAnswer = async (req: Request, res: Response) => {
     const isCorrect = selectedOption === question.correctAnswer;
 
     // Update answer
-    attempt.answers[questionIndex].selectedOption = selectedOption;
-    attempt.answers[questionIndex].isCorrect = isCorrect;
-    attempt.answers[questionIndex].timeTaken = timeTaken || 0;
+    attempt.answers[answerIndex].selectedOption = selectedOption;
+    attempt.answers[answerIndex].isCorrect = isCorrect;
+    attempt.answers[answerIndex].timeTaken = timeTaken || 0;
+
+    // Calculate points with streak bonus
+    const basePoints = 10;
+    let streakBonus = 0;
 
     // Update stats
     if (isCorrect) {
@@ -665,9 +761,7 @@ export const submitAnswer = async (req: Request, res: Response) => {
       if (attempt.currentStreak > attempt.maxStreak) {
         attempt.maxStreak = attempt.currentStreak;
       }
-      // Calculate points with streak bonus
-      const basePoints = 10;
-      const streakBonus = attempt.currentStreak > 1 ? (attempt.currentStreak - 1) * 2 : 0;
+      streakBonus = attempt.currentStreak > 1 ? (attempt.currentStreak - 1) * 2 : 0;
       attempt.bonusPoints += streakBonus;
       attempt.totalPoints += basePoints + streakBonus;
     } else {
@@ -676,7 +770,7 @@ export const submitAnswer = async (req: Request, res: Response) => {
     }
 
     attempt.attempted += 1;
-    attempt.currentQuestionIndex = questionIndex + 1;
+    attempt.currentQuestionIndex = answerIndex + 1;
 
     await attempt.save();
 
@@ -688,25 +782,21 @@ export const submitAnswer = async (req: Request, res: Response) => {
       },
     });
 
-    // Prepare response
-    const response: any = {
-      isCorrect,
-      correctAnswer: question.correctAnswer,
-      currentStreak: attempt.currentStreak,
-      totalPoints: attempt.totalPoints,
-    };
-
-    // Include explanation if enabled
+    // Get quiz for explanation setting
     const quiz = await Quiz.findById(attempt.quiz);
-    if (quiz?.showExplanationAfterEach) {
-      response.explanation = attempt.language === 'hi' && question.explanationHindi
-        ? question.explanationHindi
-        : question.explanation;
-    }
 
+    // Return format matching frontend's AnswerResult interface
     res.json({
       success: true,
-      data: response,
+      data: {
+        isCorrect,
+        correctOption: question.correctAnswer, // 'a', 'b', 'c', or 'd'
+        explanation: question.explanation,
+        explanationHi: question.explanationHindi,
+        pointsEarned: isCorrect ? basePoints + streakBonus : 0,
+        streak: attempt.currentStreak,
+        bonusPoints: streakBonus,
+      },
     });
   } catch (error: any) {
     logger.error('Submit answer error:', error);
@@ -724,7 +814,8 @@ export const submitAnswer = async (req: Request, res: Response) => {
 export const submitQuiz = async (req: Request, res: Response) => {
   try {
     const { attemptId } = req.params;
-    const { answers } = req.body; // For exam mode: [{questionIndex, selectedOption, timeTaken}]
+    // Frontend sends: { answers: { "questionId1": "a", "questionId2": "b" } }
+    const { answers } = req.body; // Record<string, string> for exam mode
     const userId = req.user!.userId;
 
     const attempt = await QuizAttempt.findOne({ _id: attemptId, user: userId });
@@ -750,13 +841,12 @@ export const submitQuiz = async (req: Request, res: Response) => {
       });
     }
 
-    // If exam mode, process all answers now
-    if (attempt.mode === 'exam' && answers) {
-      for (const ans of answers) {
-        if (ans.selectedOption) {
-          attempt.answers[ans.questionIndex].selectedOption = ans.selectedOption;
-          attempt.answers[ans.questionIndex].timeTaken = ans.timeTaken || 0;
-          attempt.answers[ans.questionIndex].markedForReview = ans.markedForReview || false;
+    // Process exam mode answers - frontend sends object format {questionId: selectedOption}
+    if (attempt.mode === 'exam' && answers && typeof answers === 'object') {
+      for (let i = 0; i < attempt.answers.length; i++) {
+        const qId = attempt.answers[i].questionId.toString();
+        if (answers[qId]) {
+          attempt.answers[i].selectedOption = answers[qId];
         }
       }
     }
@@ -843,20 +933,34 @@ export const submitQuiz = async (req: Request, res: Response) => {
 
     logger.info(`Quiz submitted: ${attemptId} by user ${userId}, score: ${score}/${maxScore}`);
 
+    // Build questionResults for frontend
+    const questionResults = attempt.answers.map((ans) => {
+      const question = questionMap.get(ans.questionId.toString());
+      return {
+        questionId: ans.questionId.toString(),
+        selectedOption: ans.selectedOption,
+        correctOption: question?.correctAnswer || '',
+        isCorrect: ans.isCorrect,
+        explanation: question?.explanation,
+      };
+    });
+
+    // Return format matching frontend's QuizResult interface
     res.json({
       success: true,
       data: {
         score: attempt.score,
-        maxScore: attempt.maxScore,
+        totalMarks: attempt.maxScore,
         percentage: attempt.percentage,
         grade: attempt.grade,
+        correctCount: attempt.correct,
+        incorrectCount: attempt.wrong,
+        unansweredCount: attempt.skipped,
+        timeTaken: attempt.totalTimeTaken,
         passed: attempt.passed,
-        correct: attempt.correct,
-        wrong: attempt.wrong,
-        skipped: attempt.skipped,
-        totalTimeTaken: attempt.totalTimeTaken,
-        maxStreak: attempt.maxStreak,
+        bestStreak: attempt.maxStreak,
         totalPoints: attempt.totalPoints,
+        questionResults,
       },
     });
   } catch (error: any) {
@@ -890,55 +994,40 @@ export const getQuizResult = async (req: Request, res: Response) => {
 
     const quiz = attempt.quiz as any;
 
-    // Base result
-    const result: any = {
-      _id: attempt._id,
-      status: attempt.status,
-      mode: attempt.mode,
-      score: attempt.score,
-      maxScore: attempt.maxScore,
-      percentage: attempt.percentage,
-      grade: attempt.grade,
-      passed: attempt.passed,
-      correct: attempt.correct,
-      wrong: attempt.wrong,
-      skipped: attempt.skipped,
-      totalTimeTaken: attempt.totalTimeTaken,
-      maxStreak: attempt.maxStreak,
-      totalPoints: attempt.totalPoints,
-      startedAt: attempt.startedAt,
-      completedAt: attempt.completedAt,
-    };
+    // Get questions for building questionResults
+    const questionIds = attempt.answers.map((a) => a.questionId);
+    const questions = await Question.find({ _id: { $in: questionIds } }).lean();
+    const questionMap = new Map(questions.map((q) => [q._id.toString(), q]));
 
-    // Include answers with explanations if allowed
-    if (attempt.status === 'completed' && quiz.showAnswersAtEnd) {
-      const questionIds = attempt.answers.map((a) => a.questionId);
-      const questions = await Question.find({ _id: { $in: questionIds } }).lean();
-      const questionMap = new Map(questions.map((q) => [q._id.toString(), q]));
+    // Build questionResults matching frontend's QuizResult interface
+    const questionResults = attempt.answers.map((ans) => {
+      const question = questionMap.get(ans.questionId.toString());
+      return {
+        questionId: ans.questionId.toString(),
+        selectedOption: ans.selectedOption,
+        correctOption: question?.correctAnswer || '',
+        isCorrect: ans.isCorrect,
+        explanation: question?.explanation,
+      };
+    });
 
-      result.answers = attempt.answers.map((ans) => {
-        const question = questionMap.get(ans.questionId.toString());
-        return {
-          question: attempt.language === 'hi' && question?.questionHindi
-            ? question.questionHindi
-            : question?.question,
-          options: attempt.language === 'hi' && question?.optionsHindi
-            ? question.optionsHindi
-            : question?.options,
-          selectedOption: ans.selectedOption,
-          correctAnswer: question?.correctAnswer,
-          isCorrect: ans.isCorrect,
-          explanation: attempt.language === 'hi' && question?.explanationHindi
-            ? question.explanationHindi
-            : question?.explanation,
-          timeTaken: ans.timeTaken,
-        };
-      });
-    }
-
+    // Return format matching frontend's QuizResult interface
     res.json({
       success: true,
-      data: result,
+      data: {
+        score: attempt.score,
+        totalMarks: attempt.maxScore,
+        percentage: attempt.percentage,
+        grade: attempt.grade,
+        correctCount: attempt.correct,
+        incorrectCount: attempt.wrong,
+        unansweredCount: attempt.skipped,
+        timeTaken: attempt.totalTimeTaken,
+        passed: attempt.passed,
+        bestStreak: attempt.maxStreak,
+        totalPoints: attempt.totalPoints,
+        questionResults: quiz.showAnswersAtEnd ? questionResults : [],
+      },
     });
   } catch (error: any) {
     logger.error('Get quiz result error:', error);
