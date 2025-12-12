@@ -41,18 +41,20 @@ export const getCoursesForBuilder = async (req: Request, res: Response) => {
     // Get content stats for each course
     const coursesWithStats = await Promise.all(
       courses.map(async (course) => {
-        const [subjectCount, chapterCount, lessonCount] = await Promise.all([
+        const [subjectCount, chapterCount, lessonCount, quizCount] = await Promise.all([
           Subject.countDocuments({ course: course._id }),
           Chapter.countDocuments({ course: course._id }),
           Lesson.countDocuments({ course: course._id }),
+          Quiz.countDocuments({ course: course._id }),
         ]);
 
         return {
           ...course,
           stats: {
-            subjects: subjectCount,
-            chapters: chapterCount,
-            lessons: lessonCount,
+            totalSubjects: subjectCount,
+            totalChapters: chapterCount,
+            totalLessons: lessonCount,
+            totalQuizzes: quizCount,
           },
         };
       })

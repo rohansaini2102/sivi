@@ -1672,7 +1672,7 @@ function QuizBuilder({ lessonId, quizId }: { lessonId: string; quizId?: string }
     }
   }, [quizId, fetchQuiz]);
 
-  const createQuiz = async (mode: 'practice' | 'exam') => {
+  const createQuiz = async () => {
     setIsCreating(true);
     try {
       const token = localStorage.getItem('accessToken');
@@ -1684,7 +1684,7 @@ function QuizBuilder({ lessonId, quizId }: { lessonId: string; quizId?: string }
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ mode }),
+          body: JSON.stringify({}),
         }
       );
       const data = await res.json();
@@ -1714,25 +1714,14 @@ function QuizBuilder({ lessonId, quizId }: { lessonId: string; quizId?: string }
       <div className="text-center py-8">
         <HelpCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground mb-4">No quiz created yet</p>
-        <div className="flex items-center justify-center gap-3">
-          <Button
-            onClick={() => createQuiz('practice')}
-            disabled={isCreating}
-            className="bg-emerald-600 hover:bg-emerald-700"
-          >
-            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Practice Quiz
-          </Button>
-          <Button
-            onClick={() => createQuiz('exam')}
-            disabled={isCreating}
-            variant="outline"
-            className="border-border text-foreground"
-          >
-            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Exam Quiz
-          </Button>
-        </div>
+        <Button
+          onClick={() => createQuiz()}
+          disabled={isCreating}
+          className="bg-primary"
+        >
+          {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Create Quiz
+        </Button>
       </div>
     );
   }
@@ -1741,27 +1730,11 @@ function QuizBuilder({ lessonId, quizId }: { lessonId: string; quizId?: string }
     <div className="space-y-4">
       <div className="flex items-center justify-between p-4 border border-border rounded-lg">
         <div className="flex items-center gap-4">
-          <div className={cn(
-            'p-3 rounded-lg',
-            quiz.mode === 'practice' ? 'bg-emerald-100' : 'bg-blue-100'
-          )}>
-            <HelpCircle className={cn(
-              'h-8 w-8',
-              quiz.mode === 'practice' ? 'text-emerald-600' : 'text-blue-600'
-            )} />
+          <div className="p-3 rounded-lg bg-primary/10">
+            <HelpCircle className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="font-medium text-foreground">
-                {quiz.mode === 'practice' ? 'Practice Quiz' : 'Exam Quiz'}
-              </p>
-              <Badge
-                variant="secondary"
-                className={quiz.mode === 'practice' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}
-              >
-                {quiz.mode}
-              </Badge>
-            </div>
+            <p className="font-medium text-foreground">Quiz</p>
             <p className="text-sm text-muted-foreground">
               {quiz.totalQuestions} questions • {quiz.duration} minutes
             </p>

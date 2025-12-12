@@ -572,36 +572,6 @@ export default function QuizEditorPage() {
             </CardContent>
           </Card>
 
-          {/* Quiz Mode */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground">Quiz Mode</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={quiz.mode}
-                onValueChange={(value: 'practice' | 'exam') => setQuiz({ ...quiz, mode: value })}
-              >
-                <SelectTrigger className="w-[200px] bg-background border-border text-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  <SelectItem value="practice" className="text-foreground">
-                    Practice Mode
-                  </SelectItem>
-                  <SelectItem value="exam" className="text-foreground">
-                    Exam Mode
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground mt-2">
-                {quiz.mode === 'practice'
-                  ? 'Gamified experience with immediate feedback, streaks, and points'
-                  : 'Formal exam with timer, question palette, and final submission'}
-              </p>
-            </CardContent>
-          </Card>
-
           {/* Time & Scoring */}
           <Card className="bg-card border-border">
             <CardHeader>
