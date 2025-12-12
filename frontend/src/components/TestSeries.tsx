@@ -186,23 +186,38 @@ const TestSeries: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-r from-primary to-indigo-600 rounded-2xl p-8 lg:p-10 text-white text-center"
+          className="relative bg-gradient-to-r from-primary to-indigo-600 rounded-2xl p-8 lg:p-10 text-white text-center overflow-hidden"
         >
-          <h3 className="font-grotesk font-bold text-2xl lg:text-3xl mb-3">
-            Looking for Complete Course + Test Series?
-          </h3>
-          <p className="text-white/80 mb-6 max-w-xl mx-auto">
-            Get structured courses with notes, PDFs & quizzes along with mock tests.
-            Everything you need for Rajasthan government exams.
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.02, backgroundColor: 'white' }}
-            whileTap={{ scale: 0.98 }}
-            className="px-8 py-4 bg-white text-primary font-semibold rounded-xl inline-flex items-center gap-2"
-          >
-            Browse All Courses
-            <ArrowRight className="w-5 h-5" />
-          </motion.button>
+          {/* Background Pattern - like login page */}
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }} />
+          </div>
+
+          {/* Decorative circles */}
+          <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full pointer-events-none" />
+          <div className="absolute -left-16 -top-16 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
+          <div className="absolute right-1/4 top-0 w-32 h-32 bg-white/5 rounded-full pointer-events-none" />
+
+          <div className="relative z-10">
+            <h3 className="font-grotesk font-bold text-2xl lg:text-3xl mb-3">
+              Looking for Complete Course + Test Series?
+            </h3>
+            <p className="text-white/80 mb-6 max-w-xl mx-auto">
+              Get structured courses with notes, PDFs & quizzes along with mock tests.
+              Everything you need for Rajasthan government exams.
+            </p>
+            <motion.a
+              href="/courses"
+              whileHover={{ scale: 1.02, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}
+              whileTap={{ scale: 0.98 }}
+              className="px-8 py-4 bg-white text-primary font-semibold rounded-xl inline-flex items-center gap-2"
+            >
+              Browse All Courses
+              <ArrowRight className="w-5 h-5" />
+            </motion.a>
+          </div>
         </motion.div>
       </div>
     </section>

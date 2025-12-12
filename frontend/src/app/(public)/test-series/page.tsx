@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Search,
@@ -9,6 +10,7 @@ import {
   Grid3X3,
   List,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +31,7 @@ import {
 } from '@/components/ui/sheet';
 import { TestSeriesCard } from '@/components/cards';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 interface TestSeries {
   _id: string;
@@ -82,7 +85,10 @@ const sortOptions = [
   { value: 'tests', label: 'Most Tests' },
 ];
 
-export default function TestSeriesPage() {
+function TestSeriesContent() {
+  const searchParams = useSearchParams();
+  const urlCategory = searchParams.get('category');
+
   const [testSeries, setTestSeries] = useState<TestSeries[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -91,16 +97,31 @@ export default function TestSeriesPage() {
     totalPages: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [category, setCategory] = useState('all');
+  const [category, setCategory] = useState(urlCategory || 'all');
   const [language, setLanguage] = useState('all');
   const [sortBy, setSortBy] = useState('popular');
   const [priceFilter, setPriceFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Update category when URL param changes
+  useEffect(() => {
+    if (urlCategory) {
+      setCategory(urlCategory);
+    }
+  }, [urlCategory]);
+
   const fetchTestSeries = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        throw new Error('API URL not configured');
+      }
+
       const params = new URLSearchParams({
         page: String(pagination.page),
         limit: String(pagination.limit),
@@ -117,15 +138,24 @@ export default function TestSeriesPage() {
         sortOrder: sortBy === 'price-low' ? 'asc' : 'desc',
       });
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/store/test-series?${params}`);
+      const res = await fetch(`${apiUrl}/store/test-series?${params}`);
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch test series');
+      }
+
       const data = await res.json();
 
       if (data.success) {
-        setTestSeries(data.data.testSeries);
-        setPagination(data.data.pagination);
+        setTestSeries(data.data.testSeries || []);
+        setPagination(data.data.pagination || { page: 1, limit: 12, total: 0, totalPages: 0 });
+      } else {
+        setTestSeries([]);
       }
     } catch (error) {
       console.error('Failed to fetch test series:', error);
+      setError('Unable to load test series. Please try again later.');
+      setTestSeries([]);
     } finally {
       setIsLoading(false);
     }
@@ -356,6 +386,19 @@ export default function TestSeriesPage() {
               <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
+            ) : error ? (
+              <div className="py-16 text-center">
+                <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
+                <h3 className="mt-4 text-lg font-semibold text-foreground">
+                  Something went wrong
+                </h3>
+                <p className="mt-2 text-muted-foreground">
+                  {error}
+                </p>
+                <Button variant="outline" className="mt-4" onClick={fetchTestSeries}>
+                  Try Again
+                </Button>
+              </div>
             ) : testSeries.length === 0 ? (
               <div className="py-16 text-center">
                 <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
@@ -434,6 +477,26 @@ export default function TestSeriesPage() {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
+  );
+}
+
+export default function TestSeriesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background">
+          <Header />
+          <div className="flex h-[60vh] items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+          <Footer />
+        </div>
+      }
+    >
+      <TestSeriesContent />
+    </Suspense>
   );
 }

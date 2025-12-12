@@ -6,16 +6,13 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   Facebook, Twitter, Instagram, Youtube, Linkedin,
-  Mail, Phone, MapPin, ChevronRight
+  Mail, Phone, MapPin
 } from 'lucide-react';
-import { useRive } from '@rive-app/react-canvas';
 
 const Footer: React.FC = () => {
   const quickLinks = [
     { name: 'About Us', href: '/about' },
     { name: 'Contact', href: '/contact' },
-    { name: 'Careers', href: '/careers' },
-    { name: 'Blog', href: '/blog' },
     { name: 'Help Center', href: '/help' },
     { name: 'Terms of Service', href: '/terms' },
     { name: 'Privacy Policy', href: '/privacy' },
@@ -23,14 +20,8 @@ const Footer: React.FC = () => {
   ];
 
   const resources = [
-    { name: 'Free Mock Tests', href: '/free-tests' },
-    { name: 'Rajasthan Current Affairs', href: '/current-affairs' },
-    { name: 'Study Materials', href: '/study-materials' },
-    { name: 'Previous Year Papers', href: '/previous-papers' },
-    { name: 'RPSC Exam Calendar 2025', href: '/exam-calendar' },
-    { name: 'Exam Syllabus', href: '/syllabus' },
-    { name: 'Exam Notifications', href: '/notifications' },
-    { name: 'Success Stories', href: '/success-stories' },
+    { name: 'All Courses', href: '/courses' },
+    { name: 'Test Series', href: '/test-series' },
   ];
 
   const examLinks = [
@@ -51,11 +42,6 @@ const Footer: React.FC = () => {
     { icon: Youtube, href: '#', label: 'YouTube' },
     { icon: Linkedin, href: '#', label: 'LinkedIn' },
   ];
-
-  const { RiveComponent } = useRive({
-    src: '/animations/hero-ui-animation.riv',
-    autoplay: true,
-  });
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -119,13 +105,13 @@ const Footer: React.FC = () => {
 
             {/* Contact Info */}
             <div className="space-y-3">
-              <a href="mailto:support@siviacademy.com" className="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors">
+              <a href="mailto:info@siviacademy.in" className="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors">
                 <Mail className="w-4 h-4" />
-                support@siviacademy.com
+                info@siviacademy.in
               </a>
-              <a href="tel:+911234567890" className="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors">
+              <a href="tel:+917073431114" className="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors">
                 <Phone className="w-4 h-4" />
-                +91 12345 67890
+                +91 70734 31114
               </a>
               <div className="flex items-start gap-3 text-sm text-gray-400">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
@@ -225,15 +211,6 @@ const Footer: React.FC = () => {
               </div>
             </div>
           </motion.div>
-        </div>
-      </div>
-
-      {/* Rive Animation */}
-      <div className="border-t border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="h-[200px] w-full">
-            <RiveComponent />
-          </div>
         </div>
       </div>
 

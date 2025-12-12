@@ -14,11 +14,11 @@ const stats = [
 ];
 
 const examBadges = [
-  { name: 'RAS', color: '#4F46E5' },
-  { name: 'REET', color: '#F59E0B' },
-  { name: 'Patwar', color: '#059669' },
-  { name: 'Police', color: '#DC2626' },
-  { name: 'RPSC', color: '#0891B2' },
+  { name: 'RAS', color: '#4F46E5', href: '/test-series?category=RAS' },
+  { name: 'REET', color: '#F59E0B', href: '/test-series?category=REET' },
+  { name: 'Patwar', color: '#059669', href: '/test-series?category=PATWAR' },
+  { name: 'Police', color: '#DC2626', href: '/test-series?category=POLICE' },
+  { name: 'RPSC', color: '#0891B2', href: '/test-series?category=RPSC' },
 ];
 
 const formatNumber = (num: number): string => {
@@ -80,7 +80,7 @@ const Hero: React.FC<HeroProps> = ({ onStartQuiz }) => {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-white">
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-[0.03]">
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230085FF' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
@@ -138,38 +138,39 @@ const Hero: React.FC<HeroProps> = ({ onStartQuiz }) => {
             {/* Exam Badges */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-2 justify-center lg:justify-start mb-8">
               {examBadges.map((exam) => (
-                <span
-                  key={exam.name}
-                  className="px-3 py-1.5 rounded-full text-sm font-medium text-white"
-                  style={{ backgroundColor: exam.color }}
-                >
-                  {exam.name}
-                </span>
+                <Link key={exam.name} href={exam.href}>
+                  <motion.span
+                    whileHover={{ scale: 1.05, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-3 py-1.5 rounded-full text-sm font-medium text-white cursor-pointer inline-block"
+                    style={{ backgroundColor: exam.color }}
+                  >
+                    {exam.name}
+                  </motion.span>
+                </Link>
               ))}
             </motion.div>
 
             {/* CTA Buttons */}
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10">
-              <Link href="/courses">
-                <motion.span
-                  whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0, 133, 255, 0.35)' }}
-                  whileTap={{ scale: 0.98 }}
-                  className="px-8 py-4 bg-primary text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg cursor-pointer"
-                >
-                  Explore Courses
-                  <ArrowRight className="w-5 h-5" />
-                </motion.span>
-              </Link>
-              <Link href="/free-tests">
-                <motion.span
-                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(0, 133, 255, 0.05)' }}
-                  whileTap={{ scale: 0.98 }}
-                  className="px-8 py-4 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl flex items-center justify-center gap-2 text-lg cursor-pointer"
-                >
-                  <Play className="w-5 h-5 text-primary" />
-                  Free Mock Test
-                </motion.span>
-              </Link>
+              <motion.a
+                href="/courses"
+                whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0, 133, 255, 0.35)' }}
+                whileTap={{ scale: 0.98 }}
+                className="px-8 py-4 bg-primary text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg cursor-pointer"
+              >
+                Explore Courses
+                <ArrowRight className="w-5 h-5" />
+              </motion.a>
+              <motion.a
+                href="/test-series"
+                whileHover={{ scale: 1.02, backgroundColor: 'rgba(0, 133, 255, 0.05)' }}
+                whileTap={{ scale: 0.98 }}
+                className="px-8 py-4 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl flex items-center justify-center gap-2 text-lg cursor-pointer"
+              >
+                <Play className="w-5 h-5 text-primary" />
+                Test Series
+              </motion.a>
             </motion.div>
 
             {/* Trust Badges */}

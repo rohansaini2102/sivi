@@ -371,16 +371,6 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Divider */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-center text-sm text-gray-600">
-              Are you an admin?{' '}
-              <Link href="/admin/login" className="text-primary font-medium hover:text-blue-700">
-                Admin Login
-              </Link>
-            </p>
-          </div>
-
           {/* Back to Home */}
           <div className="mt-6 text-center">
             <Link href="/" className="text-gray-500 text-sm hover:text-gray-700 transition-colors inline-flex items-center gap-1">
