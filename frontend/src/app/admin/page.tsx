@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -10,20 +10,121 @@ import {
   FileText,
   BarChart3,
   Plus,
-  TrendingUp,
   IndianRupee,
   ArrowUpRight,
   ArrowDownRight,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { StatCard } from '@/components/cards';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+
+interface DashboardData {
+  users: {
+    total: number;
+    newThisWeek: number;
+    newThisMonth: number;
+    growthPercent: number;
+  };
+  courses: {
+    total: number;
+    published: number;
+    draft: number;
+  };
+  testSeries: {
+    total: number;
+    published: number;
+    draft: number;
+    totalExams: number;
+  };
+  payments: {
+    total: number;
+    completed: number;
+  };
+  revenue: {
+    total: number;
+    thisMonth: number;
+    lastMonth: number;
+    growthPercent: number;
+  };
+  enrollments: {
+    total: number;
+    active: number;
+  };
+  questions: {
+    total: number;
+    addedThisWeek: number;
+  };
+  recentPayments: Array<{
+    _id: string;
+    user: { name: string; email: string };
+    course?: { title: string };
+    testSeries?: { title: string };
+    amount: number;
+    createdAt: string;
+  }>;
+  recentEnrollments: Array<{
+    _id: string;
+    user: { name: string; email: string };
+    course?: { title: string };
+    testSeries?: { title: string };
+    createdAt: string;
+  }>;
+  recentUsers: Array<{
+    _id: string;
+    name: string;
+    email: string;
+    createdAt: string;
+    enrolledCount: number;
+  }>;
+}
+
+// Helper function to format time ago
+const formatTimeAgo = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  if (diffInSeconds < 172800) return 'Yesterday';
+  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+};
+
+// Helper function to format join date
+const formatJoinDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffInDays === 0) return 'Today';
+  if (diffInDays === 1) return 'Yesterday';
+  if (diffInDays < 7) return `${diffInDays} days ago`;
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+};
+
+// Helper function to format currency
+const formatCurrency = (amount: number): string => {
+  if (amount >= 100000) {
+    return `₹${(amount / 100000).toFixed(1)}L`;
+  }
+  if (amount >= 1000) {
+    return `₹${(amount / 1000).toFixed(1)}K`;
+  }
+  return `₹${amount.toLocaleString('en-IN')}`;
+};
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Redirect to change password if required
   useEffect(() => {
@@ -32,38 +133,40 @@ export default function AdminDashboardPage() {
     }
   }, [user, router]);
 
-  const stats = [
-    {
-      title: 'Total Users',
-      value: '1,234',
-      icon: Users,
-      variant: 'primary' as const,
-      trend: { value: 12, isPositive: true },
-      description: '+48 this week',
-    },
-    {
-      title: 'Active Courses',
-      value: '12',
-      icon: BookOpen,
-      variant: 'success' as const,
-      description: '3 drafts pending',
-    },
-    {
-      title: 'Test Series',
-      value: '8',
-      icon: FileText,
-      variant: 'default' as const,
-      description: '156 total exams',
-    },
-    {
-      title: 'Revenue',
-      value: '₹45,000',
-      icon: IndianRupee,
-      variant: 'warning' as const,
-      trend: { value: 8, isPositive: true },
-      description: 'This month',
-    },
-  ];
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('accessToken');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/dashboard/stats`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setDashboardData(result.data);
+      } else {
+        throw new Error(result.error?.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err: any) {
+      setError(err.message);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const quickActions = [
     {
@@ -92,51 +195,180 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  const recentActivity = [
-    {
-      type: 'user',
-      title: 'New user registered',
-      subtitle: 'user@example.com',
-      time: '2 min ago',
-      icon: Users,
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-    },
-    {
-      type: 'enrollment',
-      title: 'Course enrollment',
-      subtitle: 'Rajasthan GK Complete Course',
-      time: '15 min ago',
-      icon: BookOpen,
-      iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600',
-    },
-    {
-      type: 'test',
-      title: 'Test completed',
-      subtitle: 'RPSC RAS Mock Test #5',
-      time: '1 hour ago',
-      icon: FileText,
-      iconBg: 'bg-purple-100',
-      iconColor: 'text-purple-600',
-    },
-    {
-      type: 'payment',
-      title: 'Payment received',
-      subtitle: '₹999 - RAS Test Series',
-      time: '2 hours ago',
-      icon: IndianRupee,
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-    },
-  ];
+  // Build stats from real data
+  const stats = dashboardData
+    ? [
+        {
+          title: 'Total Users',
+          value: dashboardData.users.total.toLocaleString('en-IN'),
+          icon: Users,
+          variant: 'primary' as const,
+          trend: dashboardData.users.growthPercent !== 0
+            ? { value: Math.abs(dashboardData.users.growthPercent), isPositive: dashboardData.users.growthPercent >= 0 }
+            : undefined,
+          description: `+${dashboardData.users.newThisWeek} this week`,
+        },
+        {
+          title: 'Active Courses',
+          value: dashboardData.courses.published.toString(),
+          icon: BookOpen,
+          variant: 'success' as const,
+          description: `${dashboardData.courses.draft} drafts pending`,
+        },
+        {
+          title: 'Test Series',
+          value: dashboardData.testSeries.published.toString(),
+          icon: FileText,
+          variant: 'default' as const,
+          description: `${dashboardData.testSeries.totalExams} total exams`,
+        },
+        {
+          title: 'Revenue',
+          value: formatCurrency(dashboardData.revenue.thisMonth),
+          icon: IndianRupee,
+          variant: 'warning' as const,
+          trend: dashboardData.revenue.growthPercent !== 0
+            ? { value: Math.abs(dashboardData.revenue.growthPercent), isPositive: dashboardData.revenue.growthPercent >= 0 }
+            : undefined,
+          description: 'This month',
+        },
+      ]
+    : [];
 
-  const recentUsers = [
-    { name: 'Rahul Sharma', email: 'rahul@email.com', enrolled: 2, joined: 'Today' },
-    { name: 'Priya Singh', email: 'priya@email.com', enrolled: 1, joined: 'Today' },
-    { name: 'Amit Kumar', email: 'amit@email.com', enrolled: 3, joined: 'Yesterday' },
-    { name: 'Neha Gupta', email: 'neha@email.com', enrolled: 1, joined: 'Yesterday' },
-  ];
+  // Build recent activity from payments and enrollments
+  const recentActivity = dashboardData
+    ? [
+        ...dashboardData.recentPayments.slice(0, 2).map((payment) => ({
+          type: 'payment' as const,
+          title: 'Payment received',
+          subtitle: `₹${payment.amount.toLocaleString('en-IN')} - ${payment.course?.title || payment.testSeries?.title || 'Unknown'}`,
+          time: formatTimeAgo(payment.createdAt),
+          icon: IndianRupee,
+          iconBg: 'bg-amber-100',
+          iconColor: 'text-amber-600',
+        })),
+        ...dashboardData.recentEnrollments.slice(0, 2).map((enrollment) => ({
+          type: 'enrollment' as const,
+          title: 'New enrollment',
+          subtitle: enrollment.course?.title || enrollment.testSeries?.title || 'Unknown',
+          time: formatTimeAgo(enrollment.createdAt),
+          icon: BookOpen,
+          iconBg: 'bg-emerald-100',
+          iconColor: 'text-emerald-600',
+        })),
+      ].sort((a, b) => {
+        // Sort by time (most recent first)
+        return 0; // Already sorted from API
+      }).slice(0, 4)
+    : [];
+
+  // Build recent users from API data
+  const recentUsers = dashboardData?.recentUsers || [];
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Skeleton className="h-8 w-32 mb-2" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <Skeleton className="h-10 w-36" />
+        </div>
+
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="bg-card border-border">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-8 w-24" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions Skeleton */}
+        <div>
+          <Skeleton className="h-6 w-32 mb-4" />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-14 rounded-xl" />
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity Skeleton */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Card key={i} className="bg-card border-border">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {[1, 2, 3, 4].map((j) => (
+                  <div key={j} className="flex items-center gap-4 p-4 border-b last:border-0">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-32 mb-2" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Content Overview Skeleton */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="bg-card border-border">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Skeleton className="h-4 w-28 mb-2" />
+                    <Skeleton className="h-9 w-16" />
+                  </div>
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-lg font-semibold text-foreground mb-2">Failed to load dashboard</h2>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={fetchDashboardData}>
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -241,30 +473,37 @@ export default function AdminDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {recentActivity.map((activity, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                  className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
-                >
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${activity.iconBg}`}
+            {recentActivity.length > 0 ? (
+              <div className="divide-y divide-border">
+                {recentActivity.map((activity, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                    className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
                   >
-                    <activity.icon className={`h-5 w-5 ${activity.iconColor}`} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground">{activity.title}</p>
-                    <p className="text-sm text-muted-foreground">{activity.subtitle}</p>
-                  </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {activity.time}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${activity.iconBg}`}
+                    >
+                      <activity.icon className={`h-5 w-5 ${activity.iconColor}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground">{activity.title}</p>
+                      <p className="text-sm text-muted-foreground truncate">{activity.subtitle}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {activity.time}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <HelpCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No recent activity</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -282,33 +521,42 @@ export default function AdminDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {recentUsers.map((user, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                  className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                    <span className="text-sm font-medium text-foreground">
-                      {user.name.charAt(0)}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground">{user.name}</p>
-                    <p className="truncate text-sm text-muted-foreground">{user.email}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant="secondary">
-                      {user.enrolled} enrolled
-                    </Badge>
-                    <p className="mt-1 text-xs text-muted-foreground">{user.joined}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            {recentUsers.length > 0 ? (
+              <div className="divide-y divide-border">
+                {recentUsers.map((recentUser, index) => (
+                  <motion.div
+                    key={recentUser._id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                    className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <span className="text-sm font-medium text-foreground">
+                        {recentUser.name?.charAt(0) || '?'}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground">{recentUser.name || 'Unknown'}</p>
+                      <p className="truncate text-sm text-muted-foreground">{recentUser.email}</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="secondary">
+                        {recentUser.enrolledCount} enrolled
+                      </Badge>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatJoinDate(recentUser.createdAt)}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Users className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No users yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -320,16 +568,20 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Published Courses</p>
-                <p className="text-3xl font-bold text-foreground">9</p>
+                <p className="text-3xl font-bold text-foreground">
+                  {dashboardData?.courses.published || 0}
+                </p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
                 <BookOpen className="h-6 w-6 text-emerald-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">3 drafts</span>
+              <span className="text-muted-foreground">
+                {dashboardData?.courses.draft || 0} drafts
+              </span>
               <Link href="/admin/content" className="text-primary hover:underline">
-                Manage →
+                Manage &rarr;
               </Link>
             </div>
           </CardContent>
@@ -340,16 +592,20 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Published Test Series</p>
-                <p className="text-3xl font-bold text-foreground">6</p>
+                <p className="text-3xl font-bold text-foreground">
+                  {dashboardData?.testSeries.published || 0}
+                </p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
                 <FileText className="h-6 w-6 text-purple-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">2 drafts</span>
+              <span className="text-muted-foreground">
+                {dashboardData?.testSeries.draft || 0} drafts
+              </span>
               <Link href="/admin/content" className="text-primary hover:underline">
-                Manage →
+                Manage &rarr;
               </Link>
             </div>
           </CardContent>
@@ -360,16 +616,20 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Question Bank</p>
-                <p className="text-3xl font-bold text-foreground">2,450</p>
+                <p className="text-3xl font-bold text-foreground">
+                  {dashboardData?.questions.total.toLocaleString('en-IN') || 0}
+                </p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100">
-                <FileText className="h-6 w-6 text-amber-600" />
+                <HelpCircle className="h-6 w-6 text-amber-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">+120 this week</span>
-              <Link href="/admin/questions" className="text-primary hover:underline">
-                Manage →
+              <span className="text-muted-foreground">
+                +{dashboardData?.questions.addedThisWeek || 0} this week
+              </span>
+              <Link href="/admin/question-bank" className="text-primary hover:underline">
+                Manage &rarr;
               </Link>
             </div>
           </CardContent>

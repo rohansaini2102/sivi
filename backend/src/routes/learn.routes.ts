@@ -15,6 +15,7 @@ import {
   getDashboardProgress,
 } from '../controllers/learn.controller';
 import { authenticate } from '../middleware/auth.middleware';
+import { requireQuizAccess, requireQuizAttemptAccess } from '../middleware/enrollment.middleware';
 
 const router = Router();
 
@@ -45,24 +46,24 @@ router.post('/lessons/:lessonId/complete', authenticate, markLessonComplete);
 // ==================== QUIZZES ====================
 
 // GET /api/learn/quizzes/:quizId/info - Get quiz info for start screen
-router.get('/quizzes/:quizId/info', authenticate, getQuizInfo);
+router.get('/quizzes/:quizId/info', authenticate, requireQuizAccess, getQuizInfo);
 
 // POST /api/learn/quizzes/:quizId/start - Start quiz attempt
-router.post('/quizzes/:quizId/start', authenticate, startQuiz);
+router.post('/quizzes/:quizId/start', authenticate, requireQuizAccess, startQuiz);
 
 // GET /api/learn/quizzes/:quizId/attempts - Get user's quiz attempts history
-router.get('/quizzes/:quizId/attempts', authenticate, getQuizAttempts);
+router.get('/quizzes/:quizId/attempts', authenticate, requireQuizAccess, getQuizAttempts);
 
 // ==================== QUIZ ATTEMPTS ====================
 
 // POST /api/learn/quiz-attempts/:attemptId/answer - Submit answer (practice mode)
-router.post('/quiz-attempts/:attemptId/answer', authenticate, submitAnswer);
+router.post('/quiz-attempts/:attemptId/answer', authenticate, requireQuizAttemptAccess, submitAnswer);
 
 // POST /api/learn/quiz-attempts/:attemptId/submit - Submit entire quiz
-router.post('/quiz-attempts/:attemptId/submit', authenticate, submitQuiz);
+router.post('/quiz-attempts/:attemptId/submit', authenticate, requireQuizAttemptAccess, submitQuiz);
 
 // GET /api/learn/quiz-attempts/:attemptId/result - Get quiz result
-router.get('/quiz-attempts/:attemptId/result', authenticate, getQuizResult);
+router.get('/quiz-attempts/:attemptId/result', authenticate, requireQuizAttemptAccess, getQuizResult);
 
 // ==================== DASHBOARD ====================
 

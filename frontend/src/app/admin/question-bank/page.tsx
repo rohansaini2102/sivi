@@ -501,7 +501,7 @@ export default function QuestionBankPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">
-                    {stats.averageAccuracy.toFixed(1)}%
+                    {(stats.averageAccuracy ?? 0).toFixed(1)}%
                   </p>
                   <p className="text-sm text-muted-foreground">Avg. Accuracy</p>
                 </div>
