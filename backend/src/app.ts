@@ -14,6 +14,7 @@ import testRoutes from './routes/test.routes';
 import userRoutes from './routes/user.routes';
 import adminRoutes from './routes/admin.routes';
 import adminCourseBuilderRoutes from './routes/admin.courseBuilder.routes';
+import adminTestSeriesBuilderRoutes from './routes/admin.testSeriesBuilder.routes';
 import adminQuestionBankRoutes from './routes/admin.questionBank.routes';
 import paymentRoutes from './routes/payment.routes';
 
@@ -90,6 +91,7 @@ app.use('/api/test', testRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/course-builder', adminCourseBuilderRoutes);
+app.use('/api/admin/test-series-builder', adminTestSeriesBuilderRoutes);
 app.use('/api/admin/question-bank', adminQuestionBankRoutes);
 app.use('/api/payment', paymentRoutes);
 

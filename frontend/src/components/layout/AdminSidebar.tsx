@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   FolderOpen,
   Hammer,
+  ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
@@ -46,6 +47,12 @@ const navItems = [
     href: '/admin/course-builder',
     icon: Hammer,
     description: 'Build course content (subjects, chapters, lessons)',
+  },
+  {
+    title: 'Test Series Builder',
+    href: '/admin/test-series-builder',
+    icon: ClipboardList,
+    description: 'Build test series with exams and sections',
   },
   {
     title: 'Question Bank',

@@ -4,6 +4,8 @@ import Quiz from '../models/Quiz';
 import Lesson from '../models/Lesson';
 import Chapter from '../models/Chapter';
 import QuizAttempt from '../models/QuizAttempt';
+import Exam from '../models/Exam';
+import ExamAttempt from '../models/ExamAttempt';
 
 /**
  * Middleware to check if user has an active enrollment for a course
@@ -366,6 +368,194 @@ export const requireQuizAttemptAccess = async (
     return res.status(500).json({
       success: false,
       error: { message: 'Error checking quiz attempt access' },
+    });
+  }
+};
+
+/**
+ * Helper function to get testSeriesId from an examId
+ */
+export const getTestSeriesIdFromExam = async (examId: string): Promise<string | null> => {
+  const exam = await Exam.findById(examId).select('testSeries isFree');
+  if (!exam) return null;
+  return exam.testSeries?.toString() || null;
+};
+
+/**
+ * Helper function to check if an exam is free
+ */
+export const isExamFree = async (examId: string): Promise<boolean> => {
+  const exam = await Exam.findById(examId).select('isFree');
+  return exam?.isFree || false;
+};
+
+/**
+ * Middleware that checks exam access:
+ * 1. Gets testSeriesId from exam
+ * 2. Checks if exam is free
+ * 3. If not free, checks enrollment
+ */
+export const requireExamAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required' },
+      });
+    }
+
+    const examId = req.params.examId;
+    if (!examId) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Exam ID is required' },
+      });
+    }
+
+    // Get the exam
+    const exam = await Exam.findById(examId).select('testSeries isFree isPublished');
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Exam not found' },
+      });
+    }
+
+    // Check if exam is published
+    if (!exam.isPublished) {
+      return res.status(403).json({
+        success: false,
+        error: { message: 'This exam is not available yet' },
+      });
+    }
+
+    // Check if this is free content
+    if (exam.isFree) {
+      (req as any).exam = exam;
+      return next();
+    }
+
+    // Not free - check enrollment
+    const testSeriesId = exam.testSeries?.toString();
+    if (!testSeriesId) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Could not determine test series for this exam' },
+      });
+    }
+
+    const enrollment = await checkTestSeriesEnrollment(req.user.userId, testSeriesId);
+    if (!enrollment) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'You do not have access to this exam. Please purchase the test series to continue.',
+          code: 'NOT_ENROLLED',
+        },
+      });
+    }
+
+    // Attach exam, enrollment, and testSeriesId to request
+    (req as any).exam = exam;
+    (req as any).enrollment = enrollment;
+    (req as any).testSeriesId = testSeriesId;
+    next();
+  } catch (error) {
+    console.error('Exam access check error:', error);
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Error checking exam access' },
+    });
+  }
+};
+
+/**
+ * Middleware that checks exam attempt access:
+ * 1. Verifies the attempt belongs to the authenticated user
+ * 2. Gets testSeriesId from the attempt
+ * 3. Checks if exam is free
+ * 4. If not free, checks enrollment
+ */
+export const requireExamAttemptAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required' },
+      });
+    }
+
+    const attemptId = req.params.attemptId;
+    if (!attemptId) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Attempt ID is required' },
+      });
+    }
+
+    // Get the attempt and verify ownership
+    const attempt = await ExamAttempt.findById(attemptId)
+      .select('user exam testSeries status');
+    if (!attempt) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Exam attempt not found' },
+      });
+    }
+
+    // Verify the attempt belongs to the authenticated user
+    if (attempt.user.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        error: { message: 'You do not have access to this exam attempt' },
+      });
+    }
+
+    // Check if the exam is free
+    const isFree = await isExamFree(attempt.exam.toString());
+    if (isFree) {
+      (req as any).attempt = attempt;
+      return next();
+    }
+
+    // Not free - check enrollment
+    const testSeriesId = attempt.testSeries?.toString();
+    if (!testSeriesId) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Could not determine test series for this attempt' },
+      });
+    }
+
+    const enrollment = await checkTestSeriesEnrollment(req.user.userId, testSeriesId);
+    if (!enrollment) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'You do not have access to this exam. Please purchase the test series to continue.',
+          code: 'NOT_ENROLLED',
+        },
+      });
+    }
+
+    // Attach attempt and enrollment to request
+    (req as any).attempt = attempt;
+    (req as any).enrollment = enrollment;
+    (req as any).testSeriesId = testSeriesId;
+    next();
+  } catch (error) {
+    console.error('Exam attempt access check error:', error);
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Error checking exam attempt access' },
     });
   }
 };
