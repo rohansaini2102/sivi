@@ -53,6 +53,7 @@ interface ResultData {
     wrong: number;
     score: number;
     maxScore: number;
+    marksObtained?: number;
   }[];
 }
 
