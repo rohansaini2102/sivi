@@ -86,7 +86,11 @@ export default function MyCoursesPage() {
         const data = await response.json();
 
         if (data.success) {
-          setEnrolledCourses(data.data.enrollments || []);
+          // Filter out enrollments with null/deleted courses
+          const validEnrollments = (data.data.enrollments || []).filter(
+            (enrollment: CourseEnrollment) => enrollment.course != null
+          );
+          setEnrolledCourses(validEnrollments);
         } else {
           console.error('Failed to fetch enrollments:', data.error);
         }
