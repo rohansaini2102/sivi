@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
@@ -13,6 +14,7 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
+  ChevronRight,
   FolderOpen,
   Hammer,
   ClipboardList,
@@ -79,40 +81,53 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
   return (
     <aside
       className={cn(
-        'flex h-full flex-col border-r border-border bg-card transition-all duration-300',
+        'relative flex h-full flex-col border-r border-border bg-card transition-all duration-300',
         collapsed ? 'w-[70px]' : 'w-[260px]'
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b border-border px-4">
-        {!collapsed && (
-          <Link href="/admin" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-              S
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground">
-                SiviAcademy
-              </span>
-              <span className="text-xs text-muted-foreground">Admin Panel</span>
-            </div>
-          </Link>
+      <div
+        className={cn(
+          'flex h-16 items-center border-b border-border',
+          collapsed ? 'flex-col justify-center gap-1 px-2 py-2' : 'justify-between px-4'
         )}
-        {collapsed && (
-          <Link href="/admin" className="mx-auto">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-              S
-            </div>
-          </Link>
-        )}
-        {onToggle && !collapsed && (
+      >
+        <Link href="/admin" className="flex items-center gap-2">
+          {!collapsed ? (
+            <>
+              <Image
+                src="/fulllogo.svg"
+                alt="SiviAcademy"
+                width={120}
+                height={32}
+                className="h-8 w-auto"
+                priority
+              />
+              <span className="text-xs text-muted-foreground">Admin</span>
+            </>
+          ) : (
+            <Image
+              src="/icononly.svg"
+              alt="SiviAcademy"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+              priority
+            />
+          )}
+        </Link>
+        {onToggle && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            className="h-8 w-8"
+            className="h-6 w-6"
           >
-            <ChevronLeft className="h-4 w-4" />
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </Button>
         )}
       </div>
