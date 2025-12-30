@@ -49,7 +49,7 @@ export function GlobalSearchDropdown({ className }: GlobalSearchDropdownProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const search = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim().length < 2) {
