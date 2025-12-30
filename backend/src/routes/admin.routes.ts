@@ -6,7 +6,11 @@ import * as testSeriesController from '../controllers/admin.testSeries.controlle
 import * as dashboardController from '../controllers/admin.dashboard.controller';
 import * as usersController from '../controllers/admin.users.controller';
 import * as paymentsController from '../controllers/admin.payments.controller';
+import * as activityController from '../controllers/admin.activity.controller';
+import * as searchController from '../controllers/admin.search.controller';
+import * as settingsController from '../controllers/admin.settings.controller';
 import { uploadThumbnail as uploadToR2 } from '../services/upload.service';
+import ActivityLog from '../models/ActivityLog';
 
 const router = Router();
 
@@ -43,6 +47,40 @@ router.patch('/users/:id/status', usersController.toggleUserStatus);
 router.get('/payments', paymentsController.listPayments);
 router.get('/payments/:id', paymentsController.getPaymentById);
 router.post('/payments/:id/refund', paymentsController.processRefund);
+
+// Activities
+router.get('/activities', activityController.listActivities);
+router.get('/activities/stats', activityController.activityStats);
+
+// Debug endpoint to check ActivityLog collection
+router.get('/activities/debug', async (req: Request, res: Response) => {
+  try {
+    const count = await ActivityLog.countDocuments();
+    const sample = await ActivityLog.find().sort({ createdAt: -1 }).limit(5).lean();
+    res.json({
+      success: true,
+      data: {
+        totalActivities: count,
+        recentActivities: sample,
+        message: count === 0 ? 'No activities logged yet. Create or update a course to generate activities.' : `Found ${count} activities`
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: { message: error.message, code: 'DEBUG_ERROR' }
+    });
+  }
+});
+
+// Search
+router.get('/search', searchController.globalSearch);
+
+// Settings
+router.get('/settings/profile', settingsController.getProfile);
+router.put('/settings/profile', settingsController.updateProfile);
+router.get('/settings/notifications', settingsController.getNotificationPreferences);
+router.put('/settings/notifications', settingsController.updateNotificationPreferences);
 
 // File Upload (generic)
 router.post('/upload', uploadThumbnail, handleMulterError, async (req: Request, res: Response) => {

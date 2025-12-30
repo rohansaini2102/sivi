@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import TestSeries from '../models/TestSeries';
+import User from '../models/User';
 import { generateUniqueSlug } from '../utils/slug';
 import { uploadThumbnail, deleteFromR2 } from '../services/upload.service';
 import {
@@ -8,6 +9,7 @@ import {
   listTestSeriesQuerySchema,
 } from '../validators/testSeries.validator';
 import logger from '../utils/logger';
+import { logActivity } from '../services/activityLog.service';
 
 // List all test series (admin)
 export const listTestSeries = async (req: Request, res: Response) => {
@@ -148,6 +150,22 @@ export const createTestSeries = async (req: Request, res: Response) => {
 
     logger.info(`Test series created: ${testSeries._id} by ${req.user!.userId}`);
 
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: 'create',
+        entityType: 'test_series',
+        entityId: testSeries._id.toString(),
+        entityTitle: testSeries.title,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
+
     res.status(201).json({
       success: true,
       data: testSeries,
@@ -238,6 +256,22 @@ export const updateTestSeries = async (req: Request, res: Response) => {
 
     logger.info(`Test series updated: ${id} by ${req.user!.userId}`);
 
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor && updatedTestSeries) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: 'update',
+        entityType: 'test_series',
+        entityId: id,
+        entityTitle: updatedTestSeries.title,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
+
     res.json({
       success: true,
       data: updatedTestSeries,
@@ -287,10 +321,29 @@ export const deleteTestSeries = async (req: Request, res: Response) => {
       await deleteFromR2(testSeries.thumbnail);
     }
 
+    // Store title before deletion for activity log
+    const testSeriesTitle = testSeries.title;
+
     // Delete test series
     await TestSeries.findByIdAndDelete(id);
 
     logger.info(`Test series deleted: ${id} by ${req.user!.userId}`);
+
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: 'delete',
+        entityType: 'test_series',
+        entityId: id,
+        entityTitle: testSeriesTitle,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
 
     res.json({
       success: true,
@@ -322,6 +375,22 @@ export const togglePublish = async (req: Request, res: Response) => {
     await testSeries.save();
 
     logger.info(`Test series publish toggled: ${id} to ${testSeries.isPublished} by ${req.user!.userId}`);
+
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: testSeries.isPublished ? 'publish' : 'unpublish',
+        entityType: 'test_series',
+        entityId: id,
+        entityTitle: testSeries.title,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
 
     res.json({
       success: true,

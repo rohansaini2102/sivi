@@ -15,6 +15,10 @@ import {
   ArrowDownRight,
   AlertCircle,
   HelpCircle,
+  Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -83,6 +87,15 @@ interface DashboardData {
   }>;
 }
 
+interface Activity {
+  _id: string;
+  actorName: string;
+  action: 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
+  entityType: 'course' | 'test_series' | 'exam' | 'question' | 'user';
+  entityTitle: string;
+  createdAt: string;
+}
+
 // Helper function to format time ago
 const formatTimeAgo = (dateString: string): string => {
   const date = new Date(dateString);
@@ -123,6 +136,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -140,21 +154,33 @@ export default function AdminDashboardPage() {
       setError(null);
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/dashboard/stats`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // Fetch dashboard stats and activities in parallel
+      const [statsResponse, activitiesResponse] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/dashboard/stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/activities?limit=5`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (!response.ok) {
+      if (!statsResponse.ok) {
         throw new Error('Failed to fetch dashboard data');
       }
 
-      const result = await response.json();
-      if (result.success) {
-        setDashboardData(result.data);
+      const statsResult = await statsResponse.json();
+      if (statsResult.success) {
+        setDashboardData(statsResult.data);
       } else {
-        throw new Error(result.error?.message || 'Failed to fetch dashboard data');
+        throw new Error(statsResult.error?.message || 'Failed to fetch dashboard data');
+      }
+
+      // Handle activities (non-critical, so don't throw on error)
+      if (activitiesResponse.ok) {
+        const activitiesResult = await activitiesResponse.json();
+        if (activitiesResult.success) {
+          setActivities(activitiesResult.data.activities || []);
+        }
       }
     } catch (err: any) {
       setError(err.message);
@@ -235,32 +261,58 @@ export default function AdminDashboardPage() {
       ]
     : [];
 
-  // Build recent activity from payments and enrollments
-  const recentActivity = dashboardData
-    ? [
-        ...dashboardData.recentPayments.slice(0, 2).map((payment) => ({
-          type: 'payment' as const,
-          title: 'Payment received',
-          subtitle: `₹${payment.amount.toLocaleString('en-IN')} - ${payment.course?.title || payment.testSeries?.title || 'Unknown'}`,
-          time: formatTimeAgo(payment.createdAt),
-          icon: IndianRupee,
-          iconBg: 'bg-amber-100',
-          iconColor: 'text-amber-600',
-        })),
-        ...dashboardData.recentEnrollments.slice(0, 2).map((enrollment) => ({
-          type: 'enrollment' as const,
-          title: 'New enrollment',
-          subtitle: enrollment.course?.title || enrollment.testSeries?.title || 'Unknown',
-          time: formatTimeAgo(enrollment.createdAt),
-          icon: BookOpen,
-          iconBg: 'bg-emerald-100',
-          iconColor: 'text-emerald-600',
-        })),
-      ].sort((a, b) => {
-        // Sort by time (most recent first)
-        return 0; // Already sorted from API
-      }).slice(0, 4)
-    : [];
+  // Helper function to get activity icon and colors
+  const getActivityStyle = (action: string) => {
+    switch (action) {
+      case 'create':
+        return { icon: Plus, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' };
+      case 'update':
+        return { icon: Pencil, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' };
+      case 'delete':
+        return { icon: Trash2, iconBg: 'bg-red-100', iconColor: 'text-red-600' };
+      case 'publish':
+        return { icon: Eye, iconBg: 'bg-primary/10', iconColor: 'text-primary' };
+      case 'unpublish':
+        return { icon: EyeOff, iconBg: 'bg-orange-100', iconColor: 'text-orange-600' };
+      default:
+        return { icon: FileText, iconBg: 'bg-muted', iconColor: 'text-muted-foreground' };
+    }
+  };
+
+  const getEntityLabel = (entityType: string) => {
+    switch (entityType) {
+      case 'course': return 'course';
+      case 'test_series': return 'test series';
+      case 'exam': return 'exam';
+      case 'question': return 'question';
+      default: return entityType;
+    }
+  };
+
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case 'create': return 'created';
+      case 'update': return 'updated';
+      case 'delete': return 'deleted';
+      case 'publish': return 'published';
+      case 'unpublish': return 'unpublished';
+      default: return action;
+    }
+  };
+
+  // Build recent activity from ActivityLog
+  const recentActivity = activities.map((activity) => {
+    const style = getActivityStyle(activity.action);
+    return {
+      type: 'activity' as const,
+      title: `${activity.actorName} ${getActionLabel(activity.action)} ${getEntityLabel(activity.entityType)}`,
+      subtitle: activity.entityTitle,
+      time: formatTimeAgo(activity.createdAt),
+      icon: style.icon,
+      iconBg: style.iconBg,
+      iconColor: style.iconColor,
+    };
+  });
 
   // Build recent users from API data
   const recentUsers = dashboardData?.recentUsers || [];

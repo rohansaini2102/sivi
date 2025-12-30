@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Course from '../models/Course';
+import User from '../models/User';
 import { generateUniqueSlug } from '../utils/slug';
 import { uploadThumbnail, deleteFromR2 } from '../services/upload.service';
 import {
@@ -8,6 +9,7 @@ import {
   listCoursesQuerySchema,
 } from '../validators/course.validator';
 import logger from '../utils/logger';
+import { logActivity } from '../services/activityLog.service';
 
 // List all courses (admin)
 export const listCourses = async (req: Request, res: Response) => {
@@ -148,6 +150,22 @@ export const createCourse = async (req: Request, res: Response) => {
 
     logger.info(`Course created: ${course._id} by ${req.user!.userId}`);
 
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: 'create',
+        entityType: 'course',
+        entityId: course._id.toString(),
+        entityTitle: course.title,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
+
     res.status(201).json({
       success: true,
       data: course,
@@ -238,6 +256,22 @@ export const updateCourse = async (req: Request, res: Response) => {
 
     logger.info(`Course updated: ${id} by ${req.user!.userId}`);
 
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor && updatedCourse) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: 'update',
+        entityType: 'course',
+        entityId: id,
+        entityTitle: updatedCourse.title,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
+
     res.json({
       success: true,
       data: updatedCourse,
@@ -287,10 +321,29 @@ export const deleteCourse = async (req: Request, res: Response) => {
       await deleteFromR2(course.thumbnail);
     }
 
+    // Store title before deletion for activity log
+    const courseTitle = course.title;
+
     // Delete course
     await Course.findByIdAndDelete(id);
 
     logger.info(`Course deleted: ${id} by ${req.user!.userId}`);
+
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: 'delete',
+        entityType: 'course',
+        entityId: id,
+        entityTitle: courseTitle,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
 
     res.json({
       success: true,
@@ -322,6 +375,22 @@ export const togglePublish = async (req: Request, res: Response) => {
     await course.save();
 
     logger.info(`Course publish toggled: ${id} to ${course.isPublished} by ${req.user!.userId}`);
+
+    // Log activity
+    const actor = await User.findById(req.user!.userId).select('name role');
+    if (actor) {
+      await logActivity({
+        actor: req.user!.userId,
+        actorName: actor.name,
+        actorRole: actor.role as 'admin' | 'super_admin',
+        action: course.isPublished ? 'publish' : 'unpublish',
+        entityType: 'course',
+        entityId: id,
+        entityTitle: course.title,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
 
     res.json({
       success: true,

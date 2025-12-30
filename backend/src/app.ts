@@ -56,7 +56,13 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: CONSTANTS.RATE_LIMIT_WINDOW_MS,
   max: CONSTANTS.RATE_LIMIT_MAX_REQUESTS,
-  message: 'Too many requests, please try again later.',
+  message: {
+    success: false,
+    error: {
+      message: 'Too many requests, please try again later.',
+      code: 'RATE_LIMIT_EXCEEDED'
+    }
+  },
 });
 app.use('/api/', limiter);
 

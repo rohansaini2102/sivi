@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
+import { GlobalSearchDropdown } from '@/components/admin/GlobalSearchDropdown';
+import { NotificationDropdown } from '@/components/admin/NotificationDropdown';
 
 interface TopBarProps {
   onMenuClick?: () => void;
@@ -50,14 +52,18 @@ export function TopBar({ onMenuClick, showSearch = true, variant = 'user' }: Top
       {/* Search */}
       {showSearch && (
         <div className="hidden flex-1 md:flex md:max-w-md">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search courses, tests..."
-              className="w-full pl-10"
-            />
-          </div>
+          {variant === 'admin' ? (
+            <GlobalSearchDropdown className="w-full" />
+          ) : (
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search courses, tests..."
+                className="w-full pl-10"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -67,15 +73,15 @@ export function TopBar({ onMenuClick, showSearch = true, variant = 'user' }: Top
       {/* Right Side */}
       <div className="flex items-center gap-2">
         {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
-          <span className="sr-only">Notifications</span>
-        </Button>
+        {variant === 'admin' ? (
+          <NotificationDropdown />
+        ) : (
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
+            <span className="sr-only">Notifications</span>
+          </Button>
+        )}
 
         {/* User Menu */}
         <DropdownMenu>

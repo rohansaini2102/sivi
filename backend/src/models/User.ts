@@ -12,6 +12,14 @@ export interface IStudentInfo {
   preparingFor?: string[];
 }
 
+export interface INotificationPreferences {
+  emailNotifications: boolean;
+  activityAlerts: boolean;
+  dailyDigest: boolean;
+  newUserAlerts: boolean;
+  paymentAlerts: boolean;
+}
+
 export interface IUser extends Document {
   name: string;
   email?: string;
@@ -29,6 +37,7 @@ export interface IUser extends Document {
     notifications: boolean;
     darkMode: boolean;
   };
+  notificationPreferences?: INotificationPreferences;
   stats: {
     totalPoints: number;
     coursesCompleted: number;
@@ -94,6 +103,13 @@ const userSchema = new Schema<IUser>(
       examCategory: String,
       notifications: { type: Boolean, default: true },
       darkMode: { type: Boolean, default: false },
+    },
+    notificationPreferences: {
+      emailNotifications: { type: Boolean, default: true },
+      activityAlerts: { type: Boolean, default: true },
+      dailyDigest: { type: Boolean, default: false },
+      newUserAlerts: { type: Boolean, default: true },
+      paymentAlerts: { type: Boolean, default: true },
     },
     stats: {
       totalPoints: { type: Number, default: 0 },

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -9,12 +9,16 @@ import { Mail, Phone, ArrowRight, Loader2, ArrowLeft, CheckCircle2, BookOpen, Us
 import { useAuthStore } from '@/store/authStore';
 import { useRedirectIfAuth } from '@/hooks/useAuth';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { sendOTP, verifyOTP, isLoading, error, setError } = useAuthStore();
 
+  // Get redirect URL from query params (set by middleware) or default to dashboard
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
+
   // Redirect to dashboard if already logged in
-  const { isLoading: authLoading } = useRedirectIfAuth('/dashboard');
+  const { isLoading: authLoading } = useRedirectIfAuth(redirectTo);
 
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [loginType, setLoginType] = useState<'email' | 'phone'>('email');
@@ -39,7 +43,7 @@ export default function LoginPage() {
 
     const result = await verifyOTP(loginType, inputValue, otp, name || undefined);
     if (result.success) {
-      router.push('/dashboard');
+      router.push(redirectTo);
     } else if (result.error?.includes('Name is required') || result.isNewUser) {
       setShowNameInput(true);
     }
@@ -381,5 +385,22 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function LoginLoading() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginContent />
+    </Suspense>
   );
 }

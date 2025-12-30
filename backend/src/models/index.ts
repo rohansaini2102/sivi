@@ -12,3 +12,4 @@ export { default as TestSeries } from './TestSeries';
 export { default as Exam } from './Exam';
 export { default as Enrollment } from './Enrollment';
 export { default as Payment } from './Payment';
+export { default as ActivityLog } from './ActivityLog';

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   Sparkles, BookOpen, BarChart3, Languages, Smartphone, RefreshCw,
@@ -108,13 +109,39 @@ const Features: React.FC = () => {
             </motion.button>
           </motion.div>
 
-          {/* Right - Feature Cards */}
-          <div className="grid sm:grid-cols-2 gap-4">
+          {/* Right - Illustration */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="relative flex items-center justify-center lg:justify-end"
+          >
+            <Image
+              src="/features-illustration.svg"
+              alt="SiviAcademy Features Illustration"
+              width={500}
+              height={400}
+              className="w-full max-w-md lg:max-w-lg"
+              priority
+            />
+          </motion.div>
+        </div>
+
+        {/* Feature Cards - Full Width Row */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+          className="mt-16"
+        >
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {FEATURES.map((feature, index) => (
               <FeatureCard key={feature.id} feature={feature} index={index} />
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

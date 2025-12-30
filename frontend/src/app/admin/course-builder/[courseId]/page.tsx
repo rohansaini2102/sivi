@@ -123,6 +123,7 @@ export default function CourseBuilderEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const isInitialLoad = useRef(true);
 
   // Selected item for editing
@@ -195,6 +196,17 @@ export default function CourseBuilderEditorPage() {
   useEffect(() => {
     fetchStructure();
   }, [fetchStructure]);
+
+  // Close dropdown when tab loses focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Toggle expand/collapse
   const toggleSubject = (subjectId: string) => {
@@ -629,7 +641,10 @@ export default function CourseBuilderEditorPage() {
                         Draft
                       </Badge>
                     )}
-                    <DropdownMenu>
+                    <DropdownMenu
+                      open={openDropdown === `subject-${subject._id}`}
+                      onOpenChange={(open) => setOpenDropdown(open ? `subject-${subject._id}` : null)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -704,7 +719,10 @@ export default function CourseBuilderEditorPage() {
                                 Free
                               </Badge>
                             )}
-                            <DropdownMenu>
+                            <DropdownMenu
+                              open={openDropdown === `chapter-${chapter._id}`}
+                              onOpenChange={(open) => setOpenDropdown(open ? `chapter-${chapter._id}` : null)}
+                            >
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   variant="ghost"
@@ -769,7 +787,10 @@ export default function CourseBuilderEditorPage() {
                                     <span className="flex-1 text-sm text-foreground truncate">
                                       {lesson.title}
                                     </span>
-                                    <DropdownMenu>
+                                    <DropdownMenu
+                                      open={openDropdown === `lesson-${lesson._id}`}
+                                      onOpenChange={(open) => setOpenDropdown(open ? `lesson-${lesson._id}` : null)}
+                                    >
                                       <DropdownMenuTrigger asChild>
                                         <Button
                                           variant="ghost"
