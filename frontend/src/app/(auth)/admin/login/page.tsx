@@ -6,22 +6,22 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Loader2, Shield, Eye, EyeOff, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useRedirectIfAdmin } from '@/hooks/useAuth';
 import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
-  const { setUser, setError, error, isLoading, setLoading, user, isAuthenticated } = useAuthStore();
+  const { setUser, setError, error, isLoading, setLoading } = useAuthStore();
 
-  // Redirect to admin dashboard ONLY if already logged in as admin
+  // Use hook that verifies auth with backend before redirecting
+  // This prevents infinite loops from stale persisted state
+  const { isLoading: authLoading, user: authUser } = useRedirectIfAdmin('/admin');
+
+  // Handle mustChangePassword redirect after auth is verified
   useEffect(() => {
-    if (isAuthenticated && user && (user.role === 'admin' || user.role === 'super_admin')) {
-      // Use hard navigation for reliability
-      if (user.mustChangePassword) {
-        window.location.href = '/admin/change-password';
-      } else {
-        window.location.href = '/admin';
-      }
+    if (!authLoading && authUser?.mustChangePassword) {
+      window.location.href = '/admin/change-password';
     }
-  }, [isAuthenticated, user]);
+  }, [authLoading, authUser]);
 
   // Step: 'credentials' -> 'otp' -> done
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
@@ -110,6 +110,15 @@ export default function AdminLoginPage() {
       setLoading(false);
     }
   };
+
+  // Show loading while verifying auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 flex">
