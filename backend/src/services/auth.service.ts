@@ -17,15 +17,21 @@ export const createOTPRecord = async (
   type: 'email' | 'phone'
 ): Promise<{ success: boolean; otp?: string; error?: string }> => {
   try {
+    console.log('[OTP Debug] Creating OTP for:', {
+      identifier: identifier.toLowerCase(),
+      type,
+    });
+
     // Delete any existing OTP for this identifier
-    await OTP.deleteMany({ identifier: identifier.toLowerCase(), type });
+    const deleteResult = await OTP.deleteMany({ identifier: identifier.toLowerCase(), type });
+    console.log('[OTP Debug] Deleted existing OTPs:', deleteResult.deletedCount);
 
     // Generate new OTP
     const otp = generateOTP();
     const hashedOTP = await hashOTP(otp);
 
     // Create OTP record with 10 min expiry
-    await OTP.create({
+    const otpDoc = await OTP.create({
       identifier: identifier.toLowerCase(),
       type,
       otp: hashedOTP,
@@ -34,9 +40,15 @@ export const createOTPRecord = async (
       isUsed: false,
     });
 
+    console.log('[OTP Debug] OTP created:', {
+      id: otpDoc._id,
+      identifier: otpDoc.identifier,
+      expiresAt: otpDoc.expiresAt,
+    });
+
     return { success: true, otp };
   } catch (error) {
-    console.error('Error creating OTP:', error);
+    console.error('[OTP Debug] Error creating OTP:', error);
     return { success: false, error: 'Failed to create OTP' };
   }
 };
@@ -48,43 +60,66 @@ export const verifyOTPRecord = async (
   otp: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    console.log('[OTP Debug] Searching for OTP:', {
+      identifier: identifier.toLowerCase(),
+      type,
+      otp: otp.substring(0, 2) + '****',
+    });
+
     const otpRecord = await OTP.findOne({
       identifier: identifier.toLowerCase(),
       type,
       isUsed: false,
     });
 
+    console.log('[OTP Debug] OTP Record found:', !!otpRecord);
+    if (otpRecord) {
+      console.log('[OTP Debug] OTP details:', {
+        identifier: otpRecord.identifier,
+        expiresAt: otpRecord.expiresAt,
+        attempts: otpRecord.attempts,
+        isUsed: otpRecord.isUsed,
+        isExpired: otpRecord.expiresAt < new Date(),
+      });
+    }
+
     if (!otpRecord) {
+      console.log('[OTP Debug] OTP not found - returning error');
       return { success: false, error: 'OTP not found or expired' };
     }
 
     // Check if OTP expired
     if (otpRecord.expiresAt < new Date()) {
+      console.log('[OTP Debug] OTP expired - deleting record');
       await OTP.deleteOne({ _id: otpRecord._id });
       return { success: false, error: 'OTP expired' };
     }
 
     // Check attempts
     if (otpRecord.attempts >= CONSTANTS.OTP_MAX_ATTEMPTS) {
+      console.log('[OTP Debug] Too many attempts - deleting record');
       await OTP.deleteOne({ _id: otpRecord._id });
       return { success: false, error: 'Too many attempts. Please request a new OTP.' };
     }
 
     // Verify OTP
     const isValid = await compareOTP(otp, otpRecord.otp);
+    console.log('[OTP Debug] OTP validation result:', isValid);
 
     if (!isValid) {
       // Increment attempts
       await OTP.updateOne({ _id: otpRecord._id }, { $inc: { attempts: 1 } });
+      console.log('[OTP Debug] Invalid OTP - incrementing attempts');
       return { success: false, error: 'Invalid OTP' };
     }
 
     // Mark as used
     await OTP.updateOne({ _id: otpRecord._id }, { isUsed: true });
+    console.log('[OTP Debug] OTP verified successfully - marked as used');
 
     return { success: true };
   } catch (error) {
-    console.error('Error verifying OTP:', error);
+    console.error('[OTP Debug] Error verifying OTP:', error);
     return { success: false, error: 'Failed to verify OTP' };
   }
 };
