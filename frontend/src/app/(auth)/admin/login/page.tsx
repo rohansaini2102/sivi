@@ -77,11 +77,15 @@ export default function AdminLoginPage() {
         // Mark as successful to prevent any further submissions
         setLoginSuccess(true);
 
-        // Update user in store - the useEffect will handle navigation
+        // Update user in store
         setUser(data.data.user);
 
-        // Keep loading true - don't reset it
-        // Navigation will happen via useEffect when isAuthenticated updates
+        // Navigate directly - don't rely solely on useEffect
+        if (data.data.user.mustChangePassword) {
+          router.replace('/admin/change-password');
+        } else {
+          router.replace('/admin');
+        }
       } else {
         setError('Login failed. Please try again.');
         setLoading(false);
