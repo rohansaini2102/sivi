@@ -6,22 +6,52 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Loader2, Shield, Eye, EyeOff, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { useRedirectIfAdmin } from '@/hooks/useAuth';
 import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
-  const { setUser, setError, error, isLoading, setLoading } = useAuthStore();
+  const { setUser, setError, error, isLoading, setLoading, logout } = useAuthStore();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [validAdmin, setValidAdmin] = useState(false);
 
-  // Use hook that verifies auth with backend before redirecting
-  // This prevents infinite loops from stale persisted state
-  const { isLoading: authLoading, user: authUser } = useRedirectIfAdmin('/admin');
-
-  // Handle mustChangePassword redirect after auth is verified
+  // Check auth WITHOUT auto-refresh - just verify existing token
+  // If no token or invalid, call logout() to clear httpOnly cookie
   useEffect(() => {
-    if (!authLoading && authUser?.mustChangePassword) {
-      window.location.href = '/admin/change-password';
-    }
-  }, [authLoading, authUser]);
+    const checkExistingAuth = async () => {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        // No token - clear any stale state and httpOnly cookie
+        await logout();
+        setAuthChecked(true);
+        return;
+      }
+
+      try {
+        // Verify the token is valid (this may trigger refresh via interceptor)
+        const { data } = await authApi.getMe();
+        const user = data.data.user;
+
+        if (user && (user.role === 'admin' || user.role === 'super_admin')) {
+          setValidAdmin(true);
+          setUser(user);
+          if (user.mustChangePassword) {
+            window.location.href = '/admin/change-password';
+          } else {
+            window.location.href = '/admin';
+          }
+          return;
+        }
+        // Not an admin - clear auth
+        await logout();
+      } catch (err) {
+        // Token invalid - clear everything including httpOnly cookie
+        await logout();
+      }
+      setAuthChecked(true);
+    };
+
+    checkExistingAuth();
+  }, [logout, setUser]);
 
   // Step: 'credentials' -> 'otp' -> done
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
@@ -111,8 +141,8 @@ export default function AdminLoginPage() {
     }
   };
 
-  // Show loading while verifying auth
-  if (authLoading) {
+  // Show loading while checking auth or if valid admin (redirecting)
+  if (!authChecked || validAdmin) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
