@@ -16,7 +16,12 @@ export default function AdminLoginPage() {
   // Redirect to admin dashboard ONLY if already logged in as admin
   useEffect(() => {
     if (isAuthenticated && user && (user.role === 'admin' || user.role === 'super_admin')) {
-      router.replace('/admin');
+      // Check if user needs to change password first
+      if (user.mustChangePassword) {
+        router.replace('/admin/change-password');
+      } else {
+        router.replace('/admin');
+      }
     }
   }, [isAuthenticated, user, router]);
 
@@ -27,6 +32,7 @@ export default function AdminLoginPage() {
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [tempToken, setTempToken] = useState(''); // Temporary token after password verification
+  const [loginSuccess, setLoginSuccess] = useState(false); // Prevent double submissions after success
 
   // Step 1: Verify password and send OTP
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -54,7 +60,7 @@ export default function AdminLoginPage() {
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isLoading) return; // Prevent double submission
+    if (isLoading || loginSuccess) return; // Prevent double submission
 
     setError(null);
     setLoading(true);
@@ -68,20 +74,23 @@ export default function AdminLoginPage() {
           localStorage.setItem('accessToken', data.data.accessToken);
         }
 
+        // Mark as successful to prevent any further submissions
+        setLoginSuccess(true);
+
+        // Update user in store - the useEffect will handle navigation
         setUser(data.data.user);
 
-        // Navigate immediately - no setTimeout needed
-        if (data.data.user.mustChangePassword) {
-          router.replace('/admin/change-password');
-        } else {
-          router.replace('/admin');
-        }
+        // Keep loading true - don't reset it
+        // Navigation will happen via useEffect when isAuthenticated updates
+      } else {
+        setError('Login failed. Please try again.');
+        setLoading(false);
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Invalid OTP');
-    } finally {
       setLoading(false);
     }
+    // NO finally block - loading stays true on success
   };
 
   const handleResendOTP = async () => {
