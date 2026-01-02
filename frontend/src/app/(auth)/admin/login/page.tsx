@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -10,20 +9,19 @@ import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const { setUser, setError, error, isLoading, setLoading, user, isAuthenticated } = useAuthStore();
 
   // Redirect to admin dashboard ONLY if already logged in as admin
   useEffect(() => {
     if (isAuthenticated && user && (user.role === 'admin' || user.role === 'super_admin')) {
-      // Check if user needs to change password first
+      // Use hard navigation for reliability
       if (user.mustChangePassword) {
-        router.replace('/admin/change-password');
+        window.location.href = '/admin/change-password';
       } else {
-        router.replace('/admin');
+        window.location.href = '/admin';
       }
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user]);
 
   // Step: 'credentials' -> 'otp' -> done
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
@@ -80,11 +78,11 @@ export default function AdminLoginPage() {
         // Update user in store
         setUser(data.data.user);
 
-        // Navigate directly - don't rely solely on useEffect
+        // Use hard navigation - router.replace doesn't work reliably after state updates
         if (data.data.user.mustChangePassword) {
-          router.replace('/admin/change-password');
+          window.location.href = '/admin/change-password';
         } else {
-          router.replace('/admin');
+          window.location.href = '/admin';
         }
       } else {
         setError('Login failed. Please try again.');
