@@ -1,21 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Loader2, Shield, Eye, EyeOff, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { useRedirectIfAdmin } from '@/hooks/useAuth';
 import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { setUser, setError, error, isLoading, setLoading } = useAuthStore();
+  const { setUser, setError, error, isLoading, setLoading, user, isAuthenticated } = useAuthStore();
 
   // Redirect to admin dashboard ONLY if already logged in as admin
-  const { isLoading: authLoading } = useRedirectIfAdmin('/admin');
+  useEffect(() => {
+    if (isAuthenticated && user && (user.role === 'admin' || user.role === 'super_admin')) {
+      router.replace('/admin');
+    }
+  }, [isAuthenticated, user, router]);
 
   // Step: 'credentials' -> 'otp' -> done
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
@@ -24,6 +27,7 @@ export default function AdminLoginPage() {
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [tempToken, setTempToken] = useState(''); // Temporary token after password verification
+  const [otpSubmitted, setOtpSubmitted] = useState(false); // Prevent double submission
 
   // Step 1: Verify password and send OTP
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -50,8 +54,15 @@ export default function AdminLoginPage() {
   // Step 2: Verify OTP and complete login
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent double submission
+    if (otpSubmitted) {
+      return;
+    }
+
     setError(null);
     setLoading(true);
+    setOtpSubmitted(true);
 
     try {
       const { data } = await authApi.adminVerifyOTP(email, otp, tempToken);
@@ -64,15 +75,19 @@ export default function AdminLoginPage() {
 
         setUser(data.data.user);
 
-        // Check if password change is required
-        if (data.data.user.mustChangePassword) {
-          router.push('/admin/change-password');
-        } else {
-          router.push('/admin');
-        }
+        // Use setTimeout to ensure state is fully persisted before navigation
+        setTimeout(() => {
+          // Check if password change is required
+          if (data.data.user.mustChangePassword) {
+            router.replace('/admin/change-password');
+          } else {
+            router.replace('/admin');
+          }
+        }, 100);
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Invalid OTP');
+      setOtpSubmitted(false); // Reset on error so user can retry
     } finally {
       setLoading(false);
     }
@@ -81,10 +96,12 @@ export default function AdminLoginPage() {
   const handleResendOTP = async () => {
     setError(null);
     setLoading(true);
+    setOtpSubmitted(false); // Reset submission state for new OTP
     try {
       const { data } = await authApi.adminVerifyPassword(email, password);
       if (data.success) {
         setTempToken(data.data.tempToken);
+        setOtp(''); // Clear the old OTP
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to resend OTP');
@@ -92,15 +109,6 @@ export default function AdminLoginPage() {
       setLoading(false);
     }
   };
-
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-white border-t-transparent"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-900 flex">
@@ -355,7 +363,7 @@ export default function AdminLoginPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || otp.length !== 6}
+                  disabled={isLoading || otp.length !== 6 || otpSubmitted}
                   className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
@@ -377,6 +385,7 @@ export default function AdminLoginPage() {
                       setOtp('');
                       setTempToken('');
                       setError(null);
+                      setOtpSubmitted(false);
                     }}
                     className="text-slate-400 text-sm hover:text-white transition-colors flex items-center gap-1"
                   >
