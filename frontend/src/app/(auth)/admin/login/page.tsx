@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
-  const { setError, error, isLoading, setLoading } = useAuthStore();
+  const { setError, error, isLoading, setLoading, setUser } = useAuthStore();
   const [authChecked, setAuthChecked] = useState(false);
   const hasCheckedRef = useRef(false);
 
