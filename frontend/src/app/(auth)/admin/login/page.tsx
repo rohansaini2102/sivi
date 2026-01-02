@@ -27,7 +27,6 @@ export default function AdminLoginPage() {
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [tempToken, setTempToken] = useState(''); // Temporary token after password verification
-  const [otpSubmitted, setOtpSubmitted] = useState(false); // Prevent double submission
 
   // Step 1: Verify password and send OTP
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -55,14 +54,10 @@ export default function AdminLoginPage() {
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prevent double submission
-    if (otpSubmitted) {
-      return;
-    }
+    if (isLoading) return; // Prevent double submission
 
     setError(null);
     setLoading(true);
-    setOtpSubmitted(true);
 
     try {
       const { data } = await authApi.adminVerifyOTP(email, otp, tempToken);
@@ -75,20 +70,15 @@ export default function AdminLoginPage() {
 
         setUser(data.data.user);
 
-        // Use setTimeout to ensure state is fully persisted before navigation
-        setTimeout(() => {
-          // Check if password change is required
-          if (data.data.user.mustChangePassword) {
-            router.replace('/admin/change-password');
-          } else {
-            router.replace('/admin');
-          }
-        }, 100);
+        // Navigate immediately - no setTimeout needed
+        if (data.data.user.mustChangePassword) {
+          router.replace('/admin/change-password');
+        } else {
+          router.replace('/admin');
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Invalid OTP');
-      setOtpSubmitted(false); // Reset on error so user can retry
-    } finally {
       setLoading(false);
     }
   };
@@ -96,7 +86,6 @@ export default function AdminLoginPage() {
   const handleResendOTP = async () => {
     setError(null);
     setLoading(true);
-    setOtpSubmitted(false); // Reset submission state for new OTP
     try {
       const { data } = await authApi.adminVerifyPassword(email, password);
       if (data.success) {
@@ -363,7 +352,7 @@ export default function AdminLoginPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || otp.length !== 6 || otpSubmitted}
+                  disabled={isLoading || otp.length !== 6}
                   className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
@@ -385,7 +374,6 @@ export default function AdminLoginPage() {
                       setOtp('');
                       setTempToken('');
                       setError(null);
-                      setOtpSubmitted(false);
                     }}
                     className="text-slate-400 text-sm hover:text-white transition-colors flex items-center gap-1"
                   >
