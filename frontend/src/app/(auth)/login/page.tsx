@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -10,7 +10,6 @@ import { useAuthStore } from '@/store/authStore';
 import { useRedirectIfAuth } from '@/hooks/useAuth';
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { sendOTP, verifyOTP, isLoading, error, setError } = useAuthStore();
 
@@ -43,7 +42,8 @@ function LoginContent() {
 
     const result = await verifyOTP(loginType, inputValue, otp, name || undefined);
     if (result.success) {
-      router.push(redirectTo);
+      // Use hard navigation - router.push doesn't work reliably after state updates
+      window.location.href = redirectTo;
     } else if (result.error?.includes('Name is required') || result.isNewUser) {
       setShowNameInput(true);
     }

@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Lock, ArrowRight, Loader2, Shield, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
 
 export default function ChangePasswordPage() {
-  const router = useRouter();
   const { user, isAuthenticated, checkAuth, setUser } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,15 +31,15 @@ export default function ChangePasswordPage() {
 
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
-      router.push('/admin/login');
+      window.location.href = '/admin/login';
       return;
     }
 
     // If user doesn't need to change password, redirect to admin
     if (isHydrated && user && !user.mustChangePassword) {
-      router.push('/admin');
+      window.location.href = '/admin';
     }
-  }, [isHydrated, isAuthenticated, user, router]);
+  }, [isHydrated, isAuthenticated, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +74,7 @@ export default function ChangePasswordPage() {
 
       // Redirect to admin dashboard after 2 seconds
       setTimeout(() => {
-        router.push('/admin');
+        window.location.href = '/admin';
       }, 2000);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to change password');

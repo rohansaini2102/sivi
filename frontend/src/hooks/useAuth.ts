@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 
 interface UseAuthOptions {
@@ -17,7 +16,6 @@ export function useAuth(options: UseAuthOptions = {}) {
     requiredRole,
   } = options;
 
-  const router = useRouter();
   const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -41,23 +39,24 @@ export function useAuth(options: UseAuthOptions = {}) {
     if (!isReady) return;
 
     // Redirect if not authenticated (for protected pages)
+    // Use window.location.href for reliable navigation after state updates
     if (!redirectIfFound && !isAuthenticated) {
-      router.push(redirectTo);
+      window.location.href = redirectTo;
       return;
     }
 
     // Redirect if authenticated (for login/signup pages)
     if (redirectIfFound && isAuthenticated) {
-      router.push(redirectTo);
+      window.location.href = redirectTo;
       return;
     }
 
     // Check role requirement
     if (requiredRole && user && user.role !== requiredRole && user.role !== 'super_admin') {
-      router.push('/');
+      window.location.href = '/';
       return;
     }
-  }, [isReady, isAuthenticated, user, redirectIfFound, redirectTo, requiredRole, router]);
+  }, [isReady, isAuthenticated, user, redirectIfFound, redirectTo, requiredRole]);
 
   return {
     user,
@@ -79,7 +78,6 @@ export function useRedirectIfAuth(redirectTo = '/dashboard') {
 
 // Hook for admin auth pages (redirect to admin only if authenticated as admin)
 export function useRedirectIfAdmin(redirectTo = '/admin') {
-  const router = useRouter();
   const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -100,10 +98,11 @@ export function useRedirectIfAdmin(redirectTo = '/admin') {
     if (!isReady) return;
 
     // Only redirect if user is admin or super_admin
+    // Use window.location.href for reliable navigation
     if (isAuthenticated && user && (user.role === 'admin' || user.role === 'super_admin')) {
-      router.push(redirectTo);
+      window.location.href = redirectTo;
     }
-  }, [isReady, isAuthenticated, user, redirectTo, router]);
+  }, [isReady, isAuthenticated, user, redirectTo]);
 
   return {
     user,
