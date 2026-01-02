@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -9,49 +9,54 @@ import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
-  const { setUser, setError, error, isLoading, setLoading, logout } = useAuthStore();
+  const { setError, error, isLoading, setLoading } = useAuthStore();
   const [authChecked, setAuthChecked] = useState(false);
-  const [validAdmin, setValidAdmin] = useState(false);
+  const hasCheckedRef = useRef(false);
 
-  // Check auth WITHOUT auto-refresh - just verify existing token
-  // If no token or invalid, call logout() to clear httpOnly cookie
+  // Check auth ONCE on mount - use ref to prevent multiple runs
   useEffect(() => {
-    const checkExistingAuth = async () => {
+    // CRITICAL: Only run once, even if component re-renders
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+
+    const checkAuth = async () => {
       const token = localStorage.getItem('accessToken');
 
+      // No token = no valid session, just clear Zustand and show login
       if (!token) {
-        // No token - clear any stale state and httpOnly cookie
-        await logout();
+        // Clear Zustand state directly (no API call that might cause issues)
+        useAuthStore.getState().setUser(null);
         setAuthChecked(true);
         return;
       }
 
+      // Have token - try to verify
       try {
-        // Verify the token is valid (this may trigger refresh via interceptor)
         const { data } = await authApi.getMe();
         const user = data.data.user;
 
         if (user && (user.role === 'admin' || user.role === 'super_admin')) {
-          setValidAdmin(true);
-          setUser(user);
-          if (user.mustChangePassword) {
-            window.location.href = '/admin/change-password';
-          } else {
-            window.location.href = '/admin';
-          }
+          useAuthStore.getState().setUser(user);
+          // Navigate away - don't set authChecked since we're leaving
+          window.location.href = user.mustChangePassword
+            ? '/admin/change-password'
+            : '/admin';
           return;
         }
-        // Not an admin - clear auth
-        await logout();
+        // Not an admin user - clear and show login
+        localStorage.removeItem('accessToken');
+        useAuthStore.getState().setUser(null);
       } catch (err) {
-        // Token invalid - clear everything including httpOnly cookie
-        await logout();
+        // Token invalid - clear everything
+        localStorage.removeItem('accessToken');
+        useAuthStore.getState().setUser(null);
       }
+
       setAuthChecked(true);
     };
 
-    checkExistingAuth();
-  }, [logout, setUser]);
+    checkAuth();
+  }, []);  // Empty deps - run once on mount
 
   // Step: 'credentials' -> 'otp' -> done
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
@@ -141,8 +146,8 @@ export default function AdminLoginPage() {
     }
   };
 
-  // Show loading while checking auth or if valid admin (redirecting)
-  if (!authChecked || validAdmin) {
+  // Show loading while checking auth
+  if (!authChecked) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
