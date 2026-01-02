@@ -79,6 +79,7 @@ export default function AdminLoginPage() {
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Invalid OTP');
+    } finally {
       setLoading(false);
     }
   };
