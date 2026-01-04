@@ -21,7 +21,6 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { useRequireAdmin } from '@/hooks/useAuth';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -136,8 +135,9 @@ const formatCurrency = (amount: number): string => {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { isReady: authReady } = useRequireAdmin(); // Wait for auth before fetching
+  // Get user directly from store - layout already handles auth checking
+  // Don't call useRequireAdmin here to avoid double checkAuth() race condition
+  const { user, isAuthenticated } = useAuthStore();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,12 +187,13 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // Only fetch dashboard data AFTER auth is confirmed
+  // Fetch dashboard data when user is authenticated
+  // Layout already verified auth, so just check if user exists
   useEffect(() => {
-    if (authReady && user) {
+    if (isAuthenticated && user) {
       fetchDashboardData();
     }
-  }, [authReady, user, fetchDashboardData]);
+  }, [isAuthenticated, user, fetchDashboardData]);
 
   const quickActions = [
     {
