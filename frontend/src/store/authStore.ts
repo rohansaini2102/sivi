@@ -182,6 +182,7 @@ export const useAuthStore = create<AuthState>()(
           if (error.response?.status === 401) {
             networkErrorCount = 0;
             localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');  // Clear both tokens to avoid inconsistent state
             set({ user: null, isAuthenticated: false, isLoading: false });
           } else if (!error.response) {
             // Network error - increment counter and clear state after 3 consecutive errors

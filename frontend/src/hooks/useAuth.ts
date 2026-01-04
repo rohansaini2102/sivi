@@ -25,14 +25,20 @@ export function useAuth(options: UseAuthOptions = {}) {
     setIsHydrated(true);
   }, []);
 
-  // Check auth after hydration
+  // Check auth after hydration - but skip if already authenticated (from Zustand persist)
   useEffect(() => {
     if (isHydrated) {
+      // If user is already authenticated from Zustand hydration, skip API call
+      if (isAuthenticated && user) {
+        setIsReady(true);
+        return;
+      }
+      // Otherwise verify with backend
       checkAuth().finally(() => {
         setIsReady(true);
       });
     }
-  }, [isHydrated, checkAuth]);
+  }, [isHydrated, isAuthenticated, user, checkAuth]);
 
   // Handle redirects
   useEffect(() => {
@@ -88,11 +94,17 @@ export function useRedirectIfAdmin(redirectTo = '/admin') {
 
   useEffect(() => {
     if (isHydrated) {
+      // If user is already authenticated from Zustand hydration, skip API call
+      if (isAuthenticated && user) {
+        setIsReady(true);
+        return;
+      }
+      // Otherwise verify with backend
       checkAuth().finally(() => {
         setIsReady(true);
       });
     }
-  }, [isHydrated, checkAuth]);
+  }, [isHydrated, isAuthenticated, user, checkAuth]);
 
   useEffect(() => {
     if (!isReady) return;

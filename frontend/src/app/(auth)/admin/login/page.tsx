@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -9,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const { setError, error, isLoading, setLoading, setUser } = useAuthStore();
   const [authChecked, setAuthChecked] = useState(false);
   const hasCheckedRef = useRef(false);
@@ -128,7 +130,7 @@ export default function AdminLoginPage() {
       const { data } = await authApi.adminVerifyOTP(email, otp, tempToken);
 
       if (data.success) {
-        // Save tokens
+        // Save tokens - CRITICAL: Must save before any navigation
         if (data.data.accessToken) {
           localStorage.setItem('accessToken', data.data.accessToken);
         }
@@ -136,18 +138,28 @@ export default function AdminLoginPage() {
           localStorage.setItem('refreshToken', data.data.refreshToken);
         }
 
+        // Verify tokens were actually saved (debugging production issues)
+        const savedToken = localStorage.getItem('accessToken');
+        if (!savedToken) {
+          console.error('[Auth] Failed to save accessToken to localStorage');
+          setError('Login failed - unable to save session. Please try again.');
+          setLoading(false);
+          return;
+        }
+
         // Mark as successful to prevent any further submissions
         setLoginSuccess(true);
 
-        // Update user in store
+        // Update user in store - this persists to localStorage via Zustand
         setUser(data.data.user);
 
-        // Use hard navigation - router.replace doesn't work reliably after state updates
-        if (data.data.user.mustChangePassword) {
-          window.location.href = '/admin/change-password';
-        } else {
-          window.location.href = '/admin';
-        }
+        // Navigate using router.push to preserve JavaScript state
+        // This avoids full page reload which was causing checkAuth to run again
+        const destination = data.data.user.mustChangePassword
+          ? '/admin/change-password'
+          : '/admin';
+
+        router.push(destination);
       } else {
         setError('Login failed. Please try again.');
         setLoading(false);
