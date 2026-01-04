@@ -17,6 +17,7 @@ import {
 import { generateTokens, verifyRefreshToken } from '../utils/jwt';
 import { REFRESH_TOKEN_COOKIE_OPTIONS, CLEAR_COOKIE_OPTIONS, COOKIE_NAMES } from '../utils/cookie';
 import User from '../models/User';
+import logger from '../utils/logger';
 
 // Mask email for response
 const maskEmail = (email: string): string => {
@@ -104,6 +105,7 @@ export const verifyOTPController = async (req: Request, res: Response) => {
       success: true,
       data: {
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken, // Also return in body for cross-domain compatibility
         user: result.user,
         isNewUser: result.isNewUser,
       },
@@ -203,6 +205,7 @@ export const adminVerifyOTPController = async (req: Request, res: Response) => {
       success: true,
       data: {
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken, // Also return in body for cross-domain compatibility
         user: result.user,
       },
     });
@@ -262,17 +265,20 @@ export const changePasswordController = async (req: Request, res: Response) => {
 // POST /api/auth/refresh
 export const refreshTokenController = async (req: Request, res: Response) => {
   try {
-    const refreshToken = req.cookies?.refreshToken;
+    // Accept refresh token from cookie, body, or header (for cross-domain compatibility)
+    const refreshToken = req.cookies?.refreshToken ||
+                         req.body?.refreshToken ||
+                         (req.headers['x-refresh-token'] as string);
 
-    // Debug logging for cross-origin cookie issues
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Refresh token request:', {
-        hasCookies: !!req.cookies,
-        hasRefreshToken: !!refreshToken,
-        origin: req.headers.origin,
-        cookieHeader: req.headers.cookie ? 'present' : 'missing',
-      });
-    }
+    // Log token refresh attempts (helps diagnose cookie/auth issues)
+    logger.info('Token refresh attempt', {
+      hasCookies: !!req.cookies,
+      hasRefreshToken: !!refreshToken,
+      source: req.cookies?.refreshToken ? 'cookie' : req.body?.refreshToken ? 'body' : 'header',
+      origin: req.headers.origin,
+      cookieHeader: req.headers.cookie ? 'present' : 'missing',
+      userAgent: req.headers['user-agent'],
+    });
 
     if (!refreshToken) {
       return res.status(401).json({
@@ -309,10 +315,13 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      data: { accessToken: tokens.accessToken },
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken, // Also return in body for cross-domain compatibility
+      },
     });
   } catch (error) {
-    console.error('Refresh token error:', error);
+    logger.error('Refresh token error', { error });
     return res.status(500).json({
       success: false,
       error: { message: 'Failed to refresh token' },

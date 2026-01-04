@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authApi } from '@/lib/api';
 
+// Track network errors for stale state handling
+let networkErrorCount = 0;
+
 interface UserStats {
   coursesCompleted?: number;
   testsAttempted?: number;
@@ -71,9 +74,12 @@ export const useAuthStore = create<AuthState>()(
         try {
           const { data } = await authApi.verifyOTP(type, value, otp, name);
 
-          // Save access token
+          // Save tokens
           if (data.data.accessToken) {
             localStorage.setItem('accessToken', data.data.accessToken);
+          }
+          if (data.data.refreshToken) {
+            localStorage.setItem('refreshToken', data.data.refreshToken);
           }
 
           set({
@@ -121,46 +127,49 @@ export const useAuthStore = create<AuthState>()(
           // Ignore errors on logout
         }
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         set({ user: null, isAuthenticated: false });
       },
 
       checkAuth: async () => {
-        const token = localStorage.getItem('accessToken');
-        const currentState = get();
+        set({ isLoading: true });
 
-        // If no token but we have persisted user, try to refresh
-        if (!token && currentState.user) {
-          set({ isLoading: true });
-          try {
-            // Try to refresh using httpOnly cookie
-            const { data } = await authApi.refreshToken();
-            if (data.data.accessToken) {
-              localStorage.setItem('accessToken', data.data.accessToken);
-              // Now get user info
-              const meResponse = await authApi.getMe();
-              set({
-                user: meResponse.data.data.user,
-                isAuthenticated: true,
-                isLoading: false,
-              });
+        try {
+          const token = localStorage.getItem('accessToken');
+          const currentState = get();
+
+          // If no token but we have persisted user, try to refresh
+          if (!token && currentState.user) {
+            try {
+              // Try to refresh using httpOnly cookie
+              const { data } = await authApi.refreshToken();
+              if (data.data.accessToken) {
+                localStorage.setItem('accessToken', data.data.accessToken);
+                // Now get user info
+                const meResponse = await authApi.getMe();
+                networkErrorCount = 0; // Reset on success
+                set({
+                  user: meResponse.data.data.user,
+                  isAuthenticated: true,
+                  isLoading: false,
+                });
+                return;
+              }
+            } catch {
+              // Refresh failed, clear everything
+              set({ user: null, isAuthenticated: false, isLoading: false });
               return;
             }
-          } catch (error) {
-            // Refresh failed, clear everything
-            set({ user: null, isAuthenticated: false, isLoading: false });
+          }
+
+          // No token and no persisted user
+          if (!token) {
+            set({ isLoading: false });
             return;
           }
-        }
 
-        // No token and no persisted user
-        if (!token) {
-          set({ isLoading: false });
-          return;
-        }
-
-        set({ isLoading: true });
-        try {
           const { data } = await authApi.getMe();
+          networkErrorCount = 0; // Reset on success
           set({
             user: data.data.user,
             isAuthenticated: true,
@@ -171,10 +180,22 @@ export const useAuthStore = create<AuthState>()(
           // If refresh also fails, we'll be redirected
           // Only clear if it's truly an auth error after refresh attempt
           if (error.response?.status === 401) {
+            networkErrorCount = 0;
             localStorage.removeItem('accessToken');
             set({ user: null, isAuthenticated: false, isLoading: false });
+          } else if (!error.response) {
+            // Network error - increment counter and clear state after 3 consecutive errors
+            networkErrorCount++;
+            if (networkErrorCount >= 3) {
+              // Too many network errors - clear stale state
+              set({ user: null, isAuthenticated: false, isLoading: false });
+              networkErrorCount = 0;
+            } else {
+              // Keep persisted state but stop loading
+              set({ isLoading: false });
+            }
           } else {
-            // Network error or other issue - keep the persisted state
+            // Other error - keep the persisted state
             set({ isLoading: false });
           }
         }
@@ -186,3 +207,29 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Cross-tab synchronization - listen for auth changes in other tabs
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    // Handle accessToken removal (logout in another tab)
+    if (event.key === 'accessToken' && !event.newValue) {
+      // Token removed in another tab - logout this tab too
+      useAuthStore.setState({ user: null, isAuthenticated: false });
+    }
+
+    // Handle Zustand state changes (login/logout in another tab)
+    if (event.key === 'auth-storage' && event.newValue) {
+      try {
+        const newState = JSON.parse(event.newValue);
+        if (newState.state) {
+          useAuthStore.setState({
+            user: newState.state.user || null,
+            isAuthenticated: newState.state.isAuthenticated || false,
+          });
+        }
+      } catch {
+        // Ignore JSON parse errors
+      }
+    }
+  });
+}

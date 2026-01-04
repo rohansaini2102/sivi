@@ -23,17 +23,53 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Track if we're currently refreshing to prevent multiple refresh calls
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+// Auth endpoints that should skip token refresh (use exact matching)
+const AUTH_ENDPOINTS_SKIP_REFRESH = new Set([
+  '/auth/refresh',
+  '/auth/login',
+  '/auth/logout',
+  '/auth/send-otp',
+  '/auth/verify-otp',
+  '/auth/admin/verify-password',
+  '/auth/admin/verify-otp',
+  '/auth/me',
+]);
 
-const subscribeTokenRefresh = (callback: (token: string) => void) => {
-  refreshSubscribers.push(callback);
+// Promise-based mutex for token refresh to prevent race conditions
+let refreshPromise: Promise<string> | null = null;
+
+// Subscriber queue with both resolve and reject handlers
+let refreshSubscribers: { resolve: (token: string) => void; reject: (error: Error) => void }[] = [];
+
+const subscribeTokenRefresh = (resolve: (token: string) => void, reject: (error: Error) => void) => {
+  refreshSubscribers.push({ resolve, reject });
 };
 
 const onTokenRefreshed = (token: string) => {
-  refreshSubscribers.forEach(callback => callback(token));
+  refreshSubscribers.forEach(({ resolve }) => resolve(token));
   refreshSubscribers = [];
+};
+
+const onTokenRefreshFailed = (error: Error) => {
+  refreshSubscribers.forEach(({ reject }) => reject(error));
+  refreshSubscribers = [];
+};
+
+// Refresh tokens function
+const refreshTokens = async (): Promise<string> => {
+  const storedRefreshToken = localStorage.getItem('refreshToken');
+  const { data } = await api.post('/auth/refresh', {
+    refreshToken: storedRefreshToken,
+  });
+  const newToken = data.data.accessToken;
+
+  // Save new tokens
+  localStorage.setItem('accessToken', newToken);
+  if (data.data.refreshToken) {
+    localStorage.setItem('refreshToken', data.data.refreshToken);
+  }
+
+  return newToken;
 };
 
 // Response interceptor - handle token refresh
@@ -44,57 +80,73 @@ api.interceptors.response.use(
 
     // If 401 and not already retrying, try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Extract endpoint path for exact matching
+      // CRITICAL: In production, axios resolves URLs to full URLs (https://domain.com/api/auth/me)
+      // The old regex replace(/^\/api/, '') only works for relative URLs starting with /api
+      // Use URL parsing to properly extract pathname regardless of URL format
+      let endpoint = '';
+      try {
+        const url = new URL(originalRequest.url || '', window.location.origin);
+        endpoint = url.pathname.replace(/^\/api/, '').split('?')[0];
+      } catch {
+        // Fallback for relative URLs or if URL parsing fails
+        endpoint = originalRequest.url?.replace(/^\/api/, '').split('?')[0] || '';
+      }
+
       // Skip refresh for auth endpoints to prevent infinite loops
-      if (originalRequest.url?.includes('/auth/refresh') ||
-          originalRequest.url?.includes('/auth/login') ||
-          originalRequest.url?.includes('/auth/admin/verify')) {
+      if (AUTH_ENDPOINTS_SKIP_REFRESH.has(endpoint)) {
         return Promise.reject(error);
       }
 
-      if (isRefreshing) {
-        // Wait for the ongoing refresh to complete
-        return new Promise((resolve) => {
-          subscribeTokenRefresh((token: string) => {
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
-            resolve(api(originalRequest));
-          });
-        });
+      originalRequest._retry = true;
+
+      // If a refresh is already in progress, wait for it
+      if (refreshPromise) {
+        try {
+          const newToken = await refreshPromise;
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+          return api(originalRequest);
+        } catch (refreshError) {
+          return Promise.reject(refreshError);
+        }
       }
 
-      originalRequest._retry = true;
-      isRefreshing = true;
+      // Start a new refresh - use Promise-based mutex to prevent race conditions
+      refreshPromise = refreshTokens()
+        .then((newToken) => {
+          onTokenRefreshed(newToken);
+          return newToken;
+        })
+        .catch((refreshError) => {
+          onTokenRefreshFailed(refreshError as Error);
+
+          // Refresh failed - clear tokens and redirect to appropriate login
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          if (typeof window !== 'undefined') {
+            // Only redirect if not already on a login page
+            const currentPath = window.location.pathname;
+            if (!currentPath.includes('/login')) {
+              const isAdminRoute = currentPath.startsWith('/admin');
+              window.location.href = isAdminRoute ? '/admin/login' : '/login';
+            }
+          }
+          throw refreshError;
+        })
+        .finally(() => {
+          refreshPromise = null;
+        });
 
       try {
-        const { data } = await api.post('/auth/refresh');
-        const newToken = data.data.accessToken;
-
-        // Save new token
-        localStorage.setItem('accessToken', newToken);
-
-        isRefreshing = false;
-        onTokenRefreshed(newToken);
-
+        const newToken = await refreshPromise;
         // Retry original request with new token
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
         }
         return api(originalRequest);
       } catch (refreshError) {
-        isRefreshing = false;
-        refreshSubscribers = [];
-
-        // Refresh failed - clear token and redirect to appropriate login
-        localStorage.removeItem('accessToken');
-        if (typeof window !== 'undefined') {
-          // Only redirect if not already on a login page
-          const currentPath = window.location.pathname;
-          if (!currentPath.includes('/login')) {
-            const isAdminRoute = currentPath.startsWith('/admin');
-            window.location.href = isAdminRoute ? '/admin/login' : '/login';
-          }
-        }
         return Promise.reject(refreshError);
       }
     }
@@ -125,8 +177,10 @@ export const authApi = {
   changePassword: (oldPassword: string, newPassword: string) =>
     api.post('/auth/admin/change-password', { oldPassword, newPassword }),
 
-  refreshToken: () =>
-    api.post('/auth/refresh'),
+  refreshToken: () => {
+    const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    return api.post('/auth/refresh', { refreshToken: storedRefreshToken });
+  },
 
   logout: () =>
     api.post('/auth/logout'),

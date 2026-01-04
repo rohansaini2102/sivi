@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useRequireAdmin } from '@/hooks/useAuth';
 import { AdminSidebar, TopBar } from '@/components/layout';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -11,9 +12,20 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isLoading } = useRequireAdmin();
+  const { isLoading, user } = useRequireAdmin();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Enforce password change if required
+  useEffect(() => {
+    if (!isLoading && user?.mustChangePassword) {
+      // Only redirect if not already on change-password page
+      if (!pathname?.includes('change-password')) {
+        window.location.href = '/admin/change-password';
+      }
+    }
+  }, [isLoading, user, pathname]);
 
   if (isLoading) {
     return (

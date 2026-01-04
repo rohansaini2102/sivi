@@ -31,6 +31,8 @@ export interface IUser extends Document {
   isActive: boolean;
   mustChangePassword: boolean;
   passwordChangedAt?: Date;
+  failedLoginAttempts: number;
+  lockoutUntil?: Date | null;
   language: 'hi' | 'en';
   preferences: {
     examCategory?: string;
@@ -80,6 +82,14 @@ const userSchema = new Schema<IUser>(
       default: false,
     },
     passwordChangedAt: Date,
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockoutUntil: {
+      type: Date,
+      default: null,
+    },
     role: {
       type: String,
       enum: ['user', 'admin', 'super_admin'],

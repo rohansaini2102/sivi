@@ -6,6 +6,10 @@ import { generateTokens } from '../utils/jwt';
 import { sendOTPEmail, sendAdminOTPEmail } from './email.service';
 import { CONSTANTS } from '../config/constants';
 
+// Account lockout settings
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
 // Generate 6-digit OTP
 export const generateOTP = (): string => {
   return crypto.randomInt(100000, 999999).toString();
@@ -317,12 +321,44 @@ export const adminVerifyPasswordAndSendOTP = async (
     return { success: false, error: 'Account is inactive' };
   }
 
+  // Check if account is locked out
+  if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+    const remainingMinutes = Math.ceil((user.lockoutUntil.getTime() - Date.now()) / 60000);
+    return {
+      success: false,
+      error: `Account locked due to too many failed attempts. Try again in ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}.`,
+    };
+  }
+
   // Verify password
   const isValidPassword = await comparePassword(password, user.password);
 
   if (!isValidPassword) {
-    return { success: false, error: 'Invalid email or password' };
+    // Increment failed attempts
+    user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+
+    // Lock account if too many failed attempts
+    if (user.failedLoginAttempts >= MAX_LOGIN_ATTEMPTS) {
+      user.lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
+      await user.save();
+      return {
+        success: false,
+        error: `Account locked due to too many failed attempts. Try again in 15 minutes.`,
+      };
+    }
+
+    await user.save();
+    const attemptsRemaining = MAX_LOGIN_ATTEMPTS - user.failedLoginAttempts;
+    return {
+      success: false,
+      error: `Invalid email or password. ${attemptsRemaining} attempt${attemptsRemaining > 1 ? 's' : ''} remaining.`,
+    };
   }
+
+  // Password is correct - reset failed attempts and lockout
+  user.failedLoginAttempts = 0;
+  user.lockoutUntil = null;
+  await user.save();
 
   // Create OTP record
   const otpResult = await createOTPRecord(email, 'email');

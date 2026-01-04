@@ -66,6 +66,30 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [tempToken, setTempToken] = useState(''); // Temporary token after password verification
   const [loginSuccess, setLoginSuccess] = useState(false); // Prevent double submissions after success
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null); // OTP expiration timestamp
+  const [timeRemaining, setTimeRemaining] = useState<number>(0); // Seconds remaining
+
+  // OTP countdown timer effect
+  useEffect(() => {
+    if (!otpExpiresAt) return;
+
+    const updateCountdown = () => {
+      const remaining = Math.max(0, Math.ceil((otpExpiresAt - Date.now()) / 1000));
+      setTimeRemaining(remaining);
+
+      if (remaining <= 0) {
+        setError('OTP expired. Please request a new one.');
+      }
+    };
+
+    // Initial update
+    updateCountdown();
+
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [otpExpiresAt, setError]);
 
   // Step 1: Verify password and send OTP
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -80,6 +104,8 @@ export default function AdminLoginPage() {
       if (data.success) {
         // Store temp token (used to verify OTP was requested after password)
         setTempToken(data.data.tempToken);
+        // Set OTP expiration (10 minutes from now)
+        setOtpExpiresAt(Date.now() + 10 * 60 * 1000);
         setStep('otp');
       }
     } catch (err: any) {
@@ -102,9 +128,12 @@ export default function AdminLoginPage() {
       const { data } = await authApi.adminVerifyOTP(email, otp, tempToken);
 
       if (data.success) {
-        // Save access token
+        // Save tokens
         if (data.data.accessToken) {
           localStorage.setItem('accessToken', data.data.accessToken);
+        }
+        if (data.data.refreshToken) {
+          localStorage.setItem('refreshToken', data.data.refreshToken);
         }
 
         // Mark as successful to prevent any further submissions
@@ -138,6 +167,8 @@ export default function AdminLoginPage() {
       if (data.success) {
         setTempToken(data.data.tempToken);
         setOtp(''); // Clear the old OTP
+        // Reset OTP expiration (10 minutes from now)
+        setOtpExpiresAt(Date.now() + 10 * 60 * 1000);
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to resend OTP');
@@ -395,8 +426,12 @@ export default function AdminLoginPage() {
                     required
                     autoFocus
                   />
-                  <p className="text-xs text-slate-500 mt-2 text-center">
-                    OTP expires in 10 minutes
+                  <p className={`text-xs mt-2 text-center ${timeRemaining <= 60 ? 'text-red-400' : 'text-slate-500'}`}>
+                    {timeRemaining > 0 ? (
+                      <>OTP expires in {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</>
+                    ) : (
+                      <span className="text-red-400">OTP expired</span>
+                    )}
                   </p>
                 </div>
 
@@ -429,6 +464,7 @@ export default function AdminLoginPage() {
                       setStep('credentials');
                       setOtp('');
                       setTempToken('');
+                      setOtpExpiresAt(null);
                       setError(null);
                     }}
                     className="text-slate-400 text-sm hover:text-white transition-colors flex items-center gap-1"
