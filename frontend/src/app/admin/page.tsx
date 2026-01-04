@@ -21,6 +21,8 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useRequireAdmin } from '@/hooks/useAuth';
+import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -135,6 +137,7 @@ const formatCurrency = (amount: number): string => {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { isReady: authReady } = useRequireAdmin(); // Wait for auth before fetching
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,28 +150,20 @@ export default function AdminDashboardPage() {
     }
   }, [user, router]);
 
-  // Fetch dashboard data
+  // Fetch dashboard data using axios (handles auth, cookies, and token refresh)
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('accessToken');
 
-      // Fetch dashboard stats and activities in parallel
+      // Fetch dashboard stats and activities in parallel using axios
+      // This automatically adds auth headers and handles 401 with token refresh
       const [statsResponse, activitiesResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/dashboard/stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/activities?limit=5`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        api.get('/admin/dashboard/stats'),
+        api.get('/admin/activities?limit=5'),
       ]);
 
-      if (!statsResponse.ok) {
-        throw new Error('Failed to fetch dashboard data');
-      }
-
-      const statsResult = await statsResponse.json();
+      const statsResult = statsResponse.data;
       if (statsResult.success) {
         setDashboardData(statsResult.data);
       } else {
@@ -176,23 +171,28 @@ export default function AdminDashboardPage() {
       }
 
       // Handle activities (non-critical, so don't throw on error)
-      if (activitiesResponse.ok) {
-        const activitiesResult = await activitiesResponse.json();
-        if (activitiesResult.success) {
-          setActivities(activitiesResult.data.activities || []);
-        }
+      const activitiesResult = activitiesResponse.data;
+      if (activitiesResult.success) {
+        setActivities(activitiesResult.data.activities || []);
       }
     } catch (err: any) {
-      setError(err.message);
+      // Check if it's an auth error - the interceptor will handle redirect
+      if (err.response?.status === 401) {
+        return; // Let the interceptor handle it
+      }
+      setError(err.response?.data?.error?.message || err.message || 'Failed to load dashboard data');
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Only fetch dashboard data AFTER auth is confirmed
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (authReady && user) {
+      fetchDashboardData();
+    }
+  }, [authReady, user, fetchDashboardData]);
 
   const quickActions = [
     {
