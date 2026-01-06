@@ -153,13 +153,14 @@ export default function AdminLoginPage() {
         // Update user in store - this persists to localStorage via Zustand
         setUser(data.data.user);
 
-        // Navigate using router.push to preserve JavaScript state
-        // This avoids full page reload which was causing checkAuth to run again
+        // Navigate using window.location.href for full page reload
+        // router.push() causes Zustand state subscription issues - new components
+        // may not see the updated state, leading to stuck loading screen
         const destination = data.data.user.mustChangePassword
           ? '/admin/change-password'
           : '/admin';
 
-        router.push(destination);
+        window.location.href = destination;
       } else {
         setError('Login failed. Please try again.');
         setLoading(false);
