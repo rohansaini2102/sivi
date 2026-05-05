@@ -109,9 +109,9 @@ const Footer: React.FC = () => {
                 <Mail className="w-4 h-4" />
                 info@siviacademy.in
               </a>
-              <a href="tel:+917073431114" className="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors">
+              <a href="tel:xxxxxxxxxx" className="flex items-center gap-3 text-sm text-gray-400 hover:text-white transition-colors">
                 <Phone className="w-4 h-4" />
-                +91 70734 31114
+                xxxxxxxxxx
               </a>
               <div className="flex items-start gap-3 text-sm text-gray-400">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />

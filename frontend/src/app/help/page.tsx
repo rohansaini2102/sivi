@@ -219,9 +219,9 @@ export default function HelpPage() {
                 <span>info@siviacademy.in</span>
               </a>
               <div className="hidden sm:block w-px h-6 bg-gray-300" />
-              <a href="tel:+917073431114" className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors">
+              <a href="tel:xxxxxxxxxx" className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors">
                 <Phone className="w-5 h-5" />
-                <span>+91 70734 31114</span>
+                <span>xxxxxxxxxx</span>
               </a>
               <div className="hidden sm:block w-px h-6 bg-gray-300" />
               <Link href="/contact" className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors">
@@ -343,7 +343,7 @@ export default function HelpPage() {
                   Contact Support
                 </Button>
               </Link>
-              <a href="tel:+917073431114">
+              <a href="tel:xxxxxxxxxx">
                 <Button size="lg" variant="outline" className="bg-transparent text-white border-white hover:bg-white/10">
                   <Phone className="w-4 h-4 mr-2" />
                   Call Us
