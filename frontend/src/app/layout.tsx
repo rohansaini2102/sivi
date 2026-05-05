@@ -101,7 +101,7 @@ const jsonLd = {
       },
       contactPoint: {
         "@type": "ContactPoint",
-        telephone: "+91-12345-67890",
+        telephone: "xxxxxxxxxx",
         contactType: "customer service",
         availableLanguage: ["Hindi", "English"],
       },
