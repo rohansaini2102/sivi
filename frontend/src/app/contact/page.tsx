@@ -46,8 +46,8 @@ export default function ContactPage() {
     {
       icon: Phone,
       title: 'Call Us',
-      content: '+91 70734 31114',
-      href: 'tel:+917073431114',
+      content: 'xxxxxxxxxx',
+      href: 'tel:xxxxxxxxxx',
       color: 'bg-green-500',
     },
     {
@@ -296,11 +296,11 @@ export default function ContactPage() {
                     For urgent queries, reach out to us directly via phone or WhatsApp.
                   </p>
                   <a
-                    href="tel:+917073431114"
+                    href="tel:xxxxxxxxxx"
                     className="inline-flex items-center text-primary font-medium hover:underline"
                   >
                     <Phone className="w-4 h-4 mr-2" />
-                    +91 70734 31114
+                    xxxxxxxxxx
                   </a>
                 </div>
               </motion.div>

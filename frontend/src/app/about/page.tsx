@@ -215,8 +215,8 @@ export default function AboutPage() {
               <a href="/contact" className="inline-flex items-center justify-center px-6 py-3 bg-white text-primary font-medium rounded-xl hover:bg-gray-100 transition-colors">
                 Contact Us
               </a>
-              <a href="tel:+917073431114" className="inline-flex items-center justify-center px-6 py-3 bg-transparent text-white font-medium rounded-xl border border-white hover:bg-white/10 transition-colors">
-                Call: +91 70734 31114
+              <a href="tel:xxxxxxxxxx" className="inline-flex items-center justify-center px-6 py-3 bg-transparent text-white font-medium rounded-xl border border-white hover:bg-white/10 transition-colors">
+                Call: xxxxxxxxxx
               </a>
             </div>
           </div>

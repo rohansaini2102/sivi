@@ -177,7 +177,7 @@ export default function PrivacyPage() {
               </p>
               <ul className="list-none text-gray-700 space-y-2">
                 <li><strong>Email:</strong> info@siviacademy.in</li>
-                <li><strong>Phone:</strong> +91 70734 31114</li>
+                <li><strong>Phone:</strong> xxxxxxxxxx</li>
                 <li><strong>Address:</strong> Jaipur, Rajasthan, India</li>
               </ul>
             </section>
